@@ -1,0 +1,675 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Schedules{% endblock %}
+{% block header %}Schedule Management{% endblock %}
+
+{% block content %}
+<!-- Add this at the top of your content block -->
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Schedules List</h2>
+        <button id="openAddScheduleModal" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <i class="fas fa-plus mr-2"></i> Add Schedule
+        </button>
+    </div>
+    <div class="p-6">
+        <!-- Filter Controls -->
+        <div class="mb-6 flex flex-wrap gap-4">
+            <div class="w-full md:w-auto">
+                <label for="vessel-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Vessel</label>
+                <select id="vessel-filter" class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Vessels</option>
+                    {% for vessel in vessels %}
+                    <option value="{{ vessel.id }}">{{ vessel.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="w-full md:w-auto">
+                <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+                <select id="status-filter" class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Statuses</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="canceled">Canceled</option>
+                </select>
+            </div>
+            <div class="w-full md:w-auto">
+                <label for="date-filter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Date</label>
+                <input type="date" id="date-filter" class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vessel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Departure</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Arrival</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available Seats</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cargo Space</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="schedules-table-body" class="divide-y divide-gray-200">
+                    {% for schedule in schedules %}
+                    <tr data-vessel-id="{{ schedule.vessel.id }}" data-status="{{ schedule.status }}" data-date="{{ schedule.departure_datetime|date:'Y-m-d' }}">
+                        <td class="px-6 py-4">{{ schedule.vessel.name }}</td>
+                        <td class="px-6 py-4">{{ schedule.departure_datetime|date:"M d, Y H:i" }}</td>
+                        <td class="px-6 py-4">{{ schedule.arrival_datetime|date:"M d, Y H:i" }}</td>
+                        <td class="px-6 py-4">{{ schedule.available_seats }}</td>
+                        <td class="px-6 py-4">{{ schedule.available_cargo_space }} tons</td>
+                        <td class="px-6 py-4">
+                            {% if schedule.status == 'scheduled' %}
+                            <span class="px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">Scheduled</span>
+                            {% elif schedule.status == 'in_progress' %}
+                            <span class="px-2 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">In Progress</span>
+                            {% elif schedule.status == 'completed' %}
+                            <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Completed</span>
+                            {% elif schedule.status == 'canceled' %}
+                            <span class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Canceled</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <button onclick="openEditScheduleModal({{ schedule.id }})" class="text-blue-600 hover:text-blue-800 mr-3">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="openDeleteScheduleModal({{ schedule.id }})" class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">No schedules found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if schedules.has_other_pages %}
+        <div class="flex justify-center mt-6">
+            <nav class="inline-flex rounded-md shadow">
+                {% if schedules.has_previous %}
+                <a href="?page={{ schedules.previous_page_number }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
+                    Previous
+                </a>
+                {% else %}
+                <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-white border border-gray-300 rounded-l-md cursor-not-allowed">
+                    Previous
+                </span>
+                {% endif %}
+                
+                {% for i in schedules.paginator.page_range %}
+                    {% if schedules.number == i %}
+                    <span class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-gray-300">
+                        {{ i }}
+                    </span>
+                    {% else %}
+                    <a href="?page={{ i }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
+                        {{ i }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if schedules.has_next %}
+                <a href="?page={{ schedules.next_page_number }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
+                    Next
+                </a>
+                {% else %}
+                <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-white border border-gray-300 rounded-r-md cursor-not-allowed">
+                    Next
+                </span>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add/Edit Schedule Modal -->
+<div id="addScheduleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h3 id="scheduleModalTitle" class="text-xl font-semibold">Add New Schedule</h3>
+            <button id="closeAddScheduleModal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="scheduleForm" method="post" action="{% url 'add_schedule' %}" class="p-6">
+            {% csrf_token %}
+            <input type="hidden" id="schedule_id" name="schedule_id">
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="vessel" class="block text-sm font-medium text-gray-700 mb-1">Vessel</label>
+                        <select id="vessel" name="vessel" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select a vessel</option>
+                            {% for vessel in vessels %}
+                            <option value="{{ vessel.id }}" 
+                                    data-capacity-passengers="{{ vessel.capacity_passengers }}"
+                                    data-capacity-cargo="{{ vessel.capacity_cargo }}">
+                                {{ vessel.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="route" class="block text-sm font-medium text-gray-700 mb-1">Route</label>
+                        <select id="route" name="route" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select a route</option>
+                            {% for route in routes %}
+                            <option value="{{ route.id }}" 
+                                    data-duration="{{ route.estimated_duration }}"
+                                    data-origin="{{ route.origin }}"
+                                    data-destination="{{ route.destination }}">
+                                {{ route.origin }} to {{ route.destination }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="adult_fare" class="block text-sm font-medium text-gray-700 mb-1">Adult Fare</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
+                            <input type="number" id="adult_fare" name="adult_fare" required min="0" step="0.01"
+                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="child_fare" class="block text-sm font-medium text-gray-700 mb-1">Child Fare</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
+                            <input type="number" id="child_fare" name="child_fare" required min="0" step="0.01"
+                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="cargo_rate" class="block text-sm font-medium text-gray-700 mb-1">Cargo Rate (per kg)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
+                            <input type="number" id="cargo_rate" name="cargo_rate" required min="0" step="0.01"
+                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="vehicle_rate" class="block text-sm font-medium text-gray-700 mb-1">Vehicle Rate</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
+                            <input type="number" id="vehicle_rate" name="vehicle_rate" required min="0" step="0.01"
+                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Existing fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="departure_datetime" class="block text-sm font-medium text-gray-700 mb-1">Departure Date & Time</label>
+                        <input type="datetime-local" id="departure_datetime" name="departure_datetime" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="arrival_datetime" class="block text-sm font-medium text-gray-700 mb-1">Arrival Date & Time</label>
+                        <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="available_seats" class="block text-sm font-medium text-gray-700 mb-1">Available Seats</label>
+                        <input type="number" id="available_seats" name="available_seats" min="0" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="available_cargo_space" class="block text-sm font-medium text-gray-700 mb-1">Available Cargo Space (tons)</label>
+                        <input type="number" id="available_cargo_space" name="available_cargo_space" min="0" step="0.1" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status" name="status" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="scheduled">Scheduled</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="canceled">Canceled</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="cancelSchedule" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg mr-2 hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <span id="submitButtonText">Add Schedule</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Schedule Modal -->
+<div id="deleteScheduleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-xl font-semibold">Delete Schedule</h3>
+            <button id="closeDeleteScheduleModal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="mb-4">Are you sure you want to delete this schedule? This action cannot be undone.</p>
+            <div class="flex justify-end">
+                <button id="cancelDeleteSchedule" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg mr-2 hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button id="confirmDeleteSchedule" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal elements
+        const addModal = document.getElementById('addScheduleModal');
+        const deleteModal = document.getElementById('deleteScheduleModal');
+        const scheduleForm = document.getElementById('scheduleForm');
+        const modalTitle = document.getElementById('scheduleModalTitle');
+        const submitButtonText = document.getElementById('submitButtonText');
+        const openAddModalBtn = document.getElementById('openAddScheduleModal');
+        const closeAddModalBtn = document.getElementById('closeAddScheduleModal');
+        const cancelAddBtn = document.getElementById('cancelSchedule');
+        const closeDeleteModalBtn = document.getElementById('closeDeleteScheduleModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteSchedule');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteSchedule');
+        const vesselFilter = document.getElementById('vessel-filter');
+        const statusFilter = document.getElementById('status-filter');
+        const dateFilter = document.getElementById('date-filter');
+        let currentScheduleId = null;
+        openAddModalBtn.addEventListener('click', function() {
+            modalTitle.textContent = 'Add New Schedule';
+            submitButtonText.textContent = 'Add Schedule';
+            scheduleForm.reset();
+            document.getElementById('schedule_id').value = '';
+            scheduleForm.action = "{% url 'add_schedule' %}";
+            
+            // Fetch fresh vessel data
+            fetch("{% url 'get_vessels' %}", {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const vesselSelect = document.getElementById('vessel');
+                    vesselSelect.innerHTML = '<option value="">Select a vessel</option>';
+                    
+                    data.vessels.forEach(vessel => {
+                        const option = document.createElement('option');
+                        option.value = vessel.id;
+                        option.textContent = vessel.name;
+                        option.dataset.capacityPassengers = vessel.capacity_passengers;
+                        option.dataset.capacityCargo = vessel.capacity_cargo;
+                        vesselSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching vessels:', error);
+            });
+    // Fetch fresh route data with proper error handling
+    fetch("{% url 'get_routes' %}", {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const routeSelect = document.getElementById('route');
+        routeSelect.innerHTML = '<option value="">Select a route</option>';
+        
+        if (Array.isArray(data.routes)) {
+            data.routes.forEach(route => {
+                const option = document.createElement('option');
+                option.value = route.id;
+                option.textContent = `${route.origin} to ${route.destination}`;
+                option.dataset.duration = route.estimated_duration;
+                option.dataset.origin = route.origin;
+                option.dataset.destination = route.destination;
+                routeSelect.appendChild(option);
+            });
+        } else {
+            console.error('Routes data is not an array:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching routes:', error);
+        const routeSelect = document.getElementById('route');
+        routeSelect.innerHTML = '<option value="">Error loading routes</option>';
+    });
+    const now = new Date();
+            const later = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+            
+            document.getElementById('departure_datetime').value = formatDatetimeLocal(now);
+            document.getElementById('arrival_datetime').value = formatDatetimeLocal(later);
+            document.getElementById('status').value = 'scheduled';
+            
+            addModal.classList.remove('hidden');
+        });
+        function formatDatetimeLocal(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        function closeAddModal() {
+            addModal.classList.add('hidden');
+            scheduleForm.reset();
+        }
+        closeAddModalBtn.addEventListener('click', closeAddModal);
+        cancelAddBtn.addEventListener('click', closeAddModal);
+        addModal.addEventListener('click', function(e) {
+            if (e.target === addModal) {
+                closeAddModal();
+            }
+        });
+        function closeDeleteModal() {
+            deleteModal.classList.add('hidden');
+            currentScheduleId = null;
+        }
+        closeDeleteModalBtn.addEventListener('click', closeDeleteModal);
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        deleteModal.addEventListener('click', function(e) {
+            if (e.target === deleteModal) {
+                closeDeleteModal();
+            }
+        });
+        scheduleForm.addEventListener('submit', function(e) {
+            const departureTime = new Date(document.getElementById('departure_datetime').value);
+            const arrivalTime = new Date(document.getElementById('arrival_datetime').value);
+            
+            if (arrivalTime <= departureTime) {
+                e.preventDefault();
+                alert('Arrival time must be after departure time');
+                return false;
+            }
+            const availableSeats = parseInt(document.getElementById('available_seats').value);
+            const availableCargoSpace = parseFloat(document.getElementById('available_cargo_space').value);
+            
+            if (availableSeats < 0 || isNaN(availableSeats)) {
+                e.preventDefault();
+                alert('Available seats must be a positive number');
+                return false;
+            }
+            
+            if (availableCargoSpace < 0 || isNaN(availableCargoSpace)) {
+                e.preventDefault();
+                alert('Available cargo space must be a positive number');
+                return false;
+            }
+        });
+        scheduleForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(scheduleForm);
+            
+            fetch(scheduleForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to show the updated schedule list
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your request.');
+            });
+        });
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (currentScheduleId) {
+                fetch(`/dashboard/schedules/${currentScheduleId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                        closeDeleteModal();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the schedule.');
+                    closeDeleteModal();
+                });
+            }
+        });
+        window.openEditScheduleModal = function(scheduleId) {
+            currentScheduleId = scheduleId;
+            modalTitle.textContent = 'Edit Schedule';
+            submitButtonText.textContent = 'Update Schedule';
+            scheduleForm.action = `/dashboard/schedules/${scheduleId}/edit/`;
+            
+            // Fetch schedule data
+            fetch(`/dashboard/schedules/${scheduleId}/get/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Populate form with schedule data
+                    document.getElementById('schedule_id').value = data.schedule.id;
+                    document.getElementById('vessel').value = data.schedule.vessel_id;
+                    
+                    // Format datetime values for datetime-local input
+                    const departureDate = new Date(data.schedule.departure_datetime);
+                    const arrivalDate = new Date(data.schedule.arrival_datetime);
+                    
+                    document.getElementById('departure_datetime').value = formatDatetimeLocal(departureDate);
+                    document.getElementById('arrival_datetime').value = formatDatetimeLocal(arrivalDate);
+                    
+                    document.getElementById('available_seats').value = data.schedule.available_seats;
+                    document.getElementById('available_cargo_space').value = data.schedule.available_cargo_space;
+                    document.getElementById('status').value = data.schedule.status;
+                    
+                    if (data.schedule.notes) {
+                        document.getElementById('notes').value = data.schedule.notes;
+                    }
+                    
+                    // Show modal
+                    addModal.classList.remove('hidden');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while fetching schedule data.');
+            });
+        };
+        window.openDeleteScheduleModal = function(scheduleId) {
+            currentScheduleId = scheduleId;
+            deleteModal.classList.remove('hidden');
+        };
+        function applyFilters() {
+            const vesselId = vesselFilter.value;
+            const status = statusFilter.value;
+            const date = dateFilter.value;
+            const rows = document.querySelectorAll('#schedules-table-body tr');
+            rows.forEach(row => {
+                if (row.hasAttribute('data-vessel-id')) {
+                    let showRow = true;
+                    
+                    if (vesselId && row.getAttribute('data-vessel-id') !== vesselId) {
+                        showRow = false;
+                    }
+                    
+                    if (status && row.getAttribute('data-status') !== status) {
+                        showRow = false;
+                    }
+                    
+                    if (date && row.getAttribute('data-date') !== date) {
+                        showRow = false;
+                    }
+                    row.style.display = showRow ? '' : 'none';
+                }
+            });
+            const visibleRows = document.querySelectorAll('#schedules-table-body tr[style=""]');
+            const noResultsRow = document.querySelector('#no-results-row');
+            if (visibleRows.length === 0) {
+                if (!noResultsRow) {
+                    const tbody = document.getElementById('schedules-table-body');
+                    const newRow = document.createElement('tr');
+                    newRow.id = 'no-results-row';
+                    newRow.innerHTML = '<td colspan="7" class="px-6 py-4 text-center text-gray-500">No schedules match the selected filters</td>';
+                    tbody.appendChild(newRow);
+                }
+            } else if (noResultsRow) {
+                noResultsRow.remove();
+            }
+        }
+        vesselFilter.addEventListener('change', applyFilters);
+        statusFilter.addEventListener('change', applyFilters);
+        dateFilter.addEventListener('change', applyFilters);
+        document.getElementById('vessel').addEventListener('change', function() {
+            const vesselId = this.value;
+            if (vesselId) {
+                fetch(`/dashboard/vessels/${vesselId}/capacity/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('available_seats').value = data.capacity_passengers;
+                        document.getElementById('available_cargo_space').value = data.capacity_cargo;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        });
+        const vesselSelect = document.getElementById('vessel');
+        vesselSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                const capacityPassengers = selectedOption.dataset.capacityPassengers;
+                const capacityCargo = selectedOption.dataset.capacityCargo;
+                
+                document.getElementById('available_seats').value = capacityPassengers;
+                document.getElementById('available_cargo_space').value = capacityCargo;
+            } else {
+                document.getElementById('available_seats').value = '';
+                document.getElementById('available_cargo_space').value = '';
+            }
+        });
+        document.getElementById('arrival_datetime').addEventListener('change', function() {
+            const departureTime = new Date(document.getElementById('departure_datetime').value);
+            const arrivalTime = new Date(this.value);
+            
+            if (arrivalTime <= departureTime) {
+                alert('Arrival time must be after departure time');
+                this.value = '';
+            }
+        });
+        document.getElementById('departure_datetime').addEventListener('change', function() {
+            const arrivalInput = document.getElementById('arrival_datetime');
+            if (arrivalInput.value) {
+                const departureTime = new Date(this.value);
+                const arrivalTime = new Date(arrivalInput.value);
+                
+                if (arrivalTime <= departureTime) {
+                    alert('Departure time must be before arrival time');
+                    this.value = '';
+                }
+            }
+        });
+    });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const routeSelect = document.getElementById('route');
+    
+    routeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const estimatedDuration = selectedOption.dataset.duration;
+        
+        if (estimatedDuration) {
+            // Get the departure datetime input
+            const departureInput = document.getElementById('departure_datetime');
+            const arrivalInput = document.getElementById('arrival_datetime');
+            
+            // When departure time is set, automatically set arrival time based on route duration
+            departureInput.addEventListener('change', function() {
+                if (this.value) {
+                    const departureTime = new Date(this.value);
+                    const [hours, minutes] = estimatedDuration.split(':');
+                    
+                    // Calculate arrival time
+                    const arrivalTime = new Date(departureTime.getTime());
+                    arrivalTime.setHours(arrivalTime.getHours() + parseInt(hours));
+                    arrivalTime.setMinutes(arrivalTime.getMinutes() + parseInt(minutes));
+                    
+                    // Format the date for the datetime-local input
+                    arrivalInput.value = arrivalTime.toISOString().slice(0, 16);
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

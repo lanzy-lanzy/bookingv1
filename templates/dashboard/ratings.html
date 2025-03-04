@@ -1,0 +1,179 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Ratings{% endblock %}
+{% block header %}Customer Ratings & Feedback{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Ratings Overview -->
+    <div class="bg-white rounded-lg shadow lg:col-span-2">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold">Customer Ratings</h2>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl font-bold">{{ avg_rating }}</span>
+                    <div class="flex text-yellow-400">
+                        {% for i in "12345"|make_list %}
+                            {% if forloop.counter <= avg_rating %}
+                                <i class="fas fa-star"></i>
+                            {% elif forloop.counter <= avg_rating|add:0.5 %}
+                                <i class="fas fa-star-half-alt"></i>
+                            {% else %}
+                                <i class="far fa-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <span class="text-gray-500">({{ ratings.count }} reviews)</span>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid gap-6">
+                {% for rating in ratings %}
+                <div class="border rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="flex items-center mb-1">
+                                <div class="flex text-yellow-400 mr-2">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= rating.rating %}
+                                        <i class="fas fa-star"></i>
+                                        {% else %}
+                                        <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="text-gray-500 text-sm">{{ rating.created_at|date:"M d, Y" }}</span>
+                            </div>
+                            <p class="font-semibold">{{ rating.vessel.name }}</p>
+                        </div>
+                        <button class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <p class="text-gray-600">{{ rating.comment }}</p>
+                    <div class="mt-2 text-sm text-gray-500">
+                        By: {{ rating.full_name|default:"Anonymous" }}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <p class="text-gray-500">No ratings available yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Rating Form -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold">Add New Testimonial</h2>
+        </div>
+        <div class="p-6">
+            <form method="post" action="{% url 'add_rating' %}" class="space-y-4">
+                {% csrf_token %}
+                
+                <!-- Customer Name -->
+                <div>
+                    <label for="full_name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                    <input type="text" id="full_name" name="full_name" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="John Doe">
+                </div>
+                
+                <!-- Vessel Selection -->
+                <div>
+                    <label for="vessel" class="block text-sm font-medium text-gray-700 mb-1">Vessel</label>
+                    <select id="vessel" name="vessel" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" required>
+                        {% for vessel in vessels %}
+                            <option value="{{ vessel.id }}">{{ vessel.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Rating -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                    <div class="flex space-x-2">
+                        <div class="rating-input flex text-yellow-400 text-2xl">
+                            <span data-value="1" class="cursor-pointer"><i class="far fa-star"></i></span>
+                            <span data-value="2" class="cursor-pointer"><i class="far fa-star"></i></span>
+                            <span data-value="3" class="cursor-pointer"><i class="far fa-star"></i></span>
+                            <span data-value="4" class="cursor-pointer"><i class="far fa-star"></i></span>
+                            <span data-value="5" class="cursor-pointer"><i class="far fa-star"></i></span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="rating_value" name="rating_value" value="0" required>
+                </div>
+                
+                <!-- Comment -->
+                <div>
+                    <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                    <textarea id="comment" name="comment" rows="4" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="Share your experience..." required></textarea>
+                </div>
+                
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">
+                        Add Testimonial
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ratingStars = document.querySelectorAll('.rating-input span');
+        const ratingInput = document.getElementById('rating_value');
+        
+        // Set initial stars
+        updateStars(parseInt(ratingInput.value));
+        
+        // Add click event to stars
+        ratingStars.forEach(star => {
+            star.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                ratingInput.value = value;
+                updateStars(value);
+            });
+            
+            // Add hover effect
+            star.addEventListener('mouseenter', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                highlightStars(value);
+            });
+        });
+        
+        // Reset stars on mouse leave
+        document.querySelector('.rating-input').addEventListener('mouseleave', function() {
+            updateStars(parseInt(ratingInput.value));
+        });
+        
+        function updateStars(value) {
+            ratingStars.forEach(star => {
+                const starValue = parseInt(star.getAttribute('data-value'));
+                if (starValue <= value) {
+                    star.innerHTML = '<i class="fas fa-star"></i>';
+                } else {
+                    star.innerHTML = '<i class="far fa-star"></i>';
+                }
+            });
+        }
+        
+        function highlightStars(value) {
+            ratingStars.forEach(star => {
+                const starValue = parseInt(star.getAttribute('data-value'));
+                if (starValue <= value) {
+                    star.innerHTML = '<i class="fas fa-star"></i>';
+                } else {
+                    star.innerHTML = '<i class="far fa-star"></i>';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
