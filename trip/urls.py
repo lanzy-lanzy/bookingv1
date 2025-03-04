@@ -66,8 +66,8 @@ urlpatterns = [
     # Vessel management URLs
     path('dashboard/vessels/', views.vessel_list, name='vessel_list'),
     path('dashboard/vessels/add/', views.add_vessel, name='add_vessel'),
-    path('dashboard/vessels/edit/<int:vessel_id>/', views.edit_vessel, name='edit_vessel'),
-    path('dashboard/vessels/delete/<int:vessel_id>/', views.delete_vessel, name='delete_vessel'),
+    path('vessels/<int:vessel_id>/edit/', views.edit_vessel, name='edit_vessel'),
+    path('vessels/<int:vessel_id>/delete/', views.delete_vessel, name='delete_vessel'),
     path('dashboard/vessels/toggle-status/<int:vessel_id>/', views.toggle_vessel_status, name='toggle_vessel_status'),
     path('routes/get/', views.get_routes, name='get_routes'),
     path('dashboard/schedules/<int:schedule_id>/get/', views.get_schedule, name='get_schedule'),

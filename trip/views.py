@@ -2480,6 +2480,7 @@ def edit_vessel(request, vessel_id):
     
     if request.method == 'POST':
         try:
+            # Update vessel fields from form data
             vessel.name = request.POST.get('name')
             vessel.capacity_passengers = request.POST.get('capacity_passengers')
             vessel.capacity_cargo = request.POST.get('capacity_cargo')
@@ -2505,11 +2506,8 @@ def edit_vessel(request, vessel_id):
             messages.error(request, f'Error updating vessel: {str(e)}')
             return redirect('vessel_list')
     
-    context = {
-        'vessel': vessel,
-        'active_tab': 'vessels'
-    }
-    return render(request, 'dashboard/edit_vessel.html', context)
+    # This view doesn't need a GET handler as it uses a modal form
+    return redirect('vessel_list')
 @login_required
 @staff_member_required
 def delete_vessel(request, vessel_id):
