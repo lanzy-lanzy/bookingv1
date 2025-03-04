@@ -475,39 +475,8 @@ def get_vessels(request):
             'error': str(e)
         })
 
-@staff_member_required
-def get_vessels(request):
-    """API endpoint to get all vessels"""
-    try:
-        vessels = Vessel.objects.filter(active=True).values(
-            'id', 'name', 'capacity_passengers', 'capacity_cargo'
-        )
-        return JsonResponse({
-            'success': True,
-            'vessels': list(vessels)
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
 
-@staff_member_required
-def get_routes(request):
-    """API endpoint to get all routes"""
-    try:
-        routes = Route.objects.filter(active=True).values(
-            'id', 'origin', 'destination', 'estimated_duration'
-        )
-        return JsonResponse({
-            'success': True,
-            'routes': list(routes)
-        })
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+
 def get_schedule_fares(request, schedule_id):
     """API endpoint to get fare information for a specific schedule"""
     schedule = get_object_or_404(Schedule, id=schedule_id)
@@ -1519,36 +1488,28 @@ def ratings(request):
 
 @login_required
 @staff_member_required
-def get_schedule(request, schedule_id):  # Make sure parameter name matches URL pattern
-    """API endpoint to get schedule information"""
+@login_required
+@staff_member_required
+def get_schedule(request, schedule_id):
+    """API endpoint for getting schedule details"""
     try:
-        schedule = get_object_or_404(
-            Schedule.objects.select_related('vessel', 'route'),
-            id=schedule_id
-        )
-        
-        schedule_data = {
-            'id': schedule.id,
-            'vessel_id': schedule.vessel.id,
-            'route_id': schedule.route.id,
-            'departure_datetime': schedule.departure_datetime.isoformat(),
-            'arrival_datetime': schedule.arrival_datetime.isoformat(),
-            'available_seats': schedule.available_seats,
-            'available_cargo_space': schedule.available_cargo_space,
-            'status': schedule.status,
-            'notes': schedule.notes if hasattr(schedule, 'notes') else '',
-            'adult_fare': str(schedule.adult_fare),
-            'child_fare': str(schedule.child_fare),
-            'route': {
-                'origin': schedule.route.origin,
-                'destination': schedule.route.destination,
-                'estimated_duration': str(schedule.route.estimated_duration)
-            }
-        }
+        schedule = get_object_or_404(Schedule, pk=schedule_id)
         
         return JsonResponse({
             'success': True,
-            'schedule': schedule_data
+            'schedule': {
+                'id': schedule.id,
+                'vessel_id': schedule.vessel.id,
+                'route_id': schedule.route.id,
+                'departure_datetime': schedule.departure_datetime.isoformat(),
+                'arrival_datetime': schedule.arrival_datetime.isoformat(),
+                'available_seats': schedule.available_seats,
+                'available_cargo_space': schedule.available_cargo_space,
+                'adult_fare': str(schedule.adult_fare),
+                'child_fare': str(schedule.child_fare),
+                'status': schedule.status,
+                'notes': schedule.notes
+            }
         })
     except Schedule.DoesNotExist:
         return JsonResponse({
@@ -1560,6 +1521,8 @@ def get_schedule(request, schedule_id):  # Make sure parameter name matches URL 
             'success': False,
             'error': str(e)
         }, status=500)
+    
+
 
 def get_vessel_capacity(request, vessel_id):
     """
@@ -2251,6 +2214,42 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 
+def edit_schedule(request, schedule_id):
+    """API endpoint for editing a schedule"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    try:
+        schedule = get_object_or_404(Schedule, pk=schedule_id)
+        
+        # Update schedule fields
+        schedule.vessel_id = request.POST.get('vessel')
+        schedule.route_id = request.POST.get('route')
+        schedule.departure_datetime = request.POST.get('departure_datetime')
+        schedule.arrival_datetime = request.POST.get('arrival_datetime')
+        schedule.available_seats = request.POST.get('available_seats')
+        schedule.available_cargo_space = request.POST.get('available_cargo_space')
+        schedule.adult_fare = request.POST.get('adult_fare')
+        schedule.child_fare = request.POST.get('child_fare')
+        schedule.status = request.POST.get('status')
+        schedule.notes = request.POST.get('notes')
+        
+        schedule.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Schedule updated successfully'
+        })
+    except Schedule.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Schedule not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 @login_required
 @staff_member_required
 def get_route(request, pk):
@@ -2652,95 +2651,6 @@ def add_schedule(request):
             'success': False,
             'error': str(e)
         }, status=500)
-@login_required
-@staff_member_required
-def edit_schedule(request, pk):
-    """API endpoint for editing an existing schedule"""
-    try:
-        schedule = get_object_or_404(Schedule, pk=pk)
-        
-        if request.method != 'POST':
-            return JsonResponse({
-                'success': False,
-                'error': 'Method not allowed'
-            }, status=405)
-
-        # Extract data from request
-        data = request.POST
-        vessel_id = data.get('vessel')
-        route_id = data.get('route')
-        departure_datetime = data.get('departure_datetime')
-        adult_fare = data.get('adult_fare')
-        child_fare = data.get('child_fare')
-        status = data.get('status', schedule.status)  # Use existing status if not provided
-
-        # Validate required fields
-        if not all([vessel_id, route_id, departure_datetime, adult_fare, child_fare]):
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing required fields'
-            }, status=400)
-
-        # Convert string values to appropriate types
-        try:
-            vessel = Vessel.objects.get(id=vessel_id)
-            route = Route.objects.get(id=route_id)
-            departure_datetime = parse_datetime(departure_datetime)
-            adult_fare = Decimal(adult_fare)
-            child_fare = Decimal(child_fare)
-        except (Vessel.DoesNotExist, Route.DoesNotExist):
-            return JsonResponse({
-                'success': False,
-                'error': 'Invalid vessel or route'
-            }, status=400)
-        except ValueError:
-            return JsonResponse({
-                'success': False,
-                'error': 'Invalid date/time or fare amount'
-            }, status=400)
-
-        # Update schedule
-        schedule.vessel = vessel
-        schedule.route = route
-        schedule.departure_datetime = departure_datetime
-        schedule.adult_fare = adult_fare
-        schedule.child_fare = child_fare
-        schedule.status = status
-        schedule.updated_by = request.user
-        schedule.save()
-
-        # Prepare response data
-        response_data = {
-            'success': True,
-            'message': 'Schedule updated successfully',
-            'schedule': {
-                'id': schedule.id,
-                'vessel_name': schedule.vessel.name,
-                'route_name': schedule.route.name,
-                'departure_datetime': schedule.departure_datetime.isoformat(),
-                'adult_fare': str(schedule.adult_fare),
-                'child_fare': str(schedule.child_fare),
-                'status': schedule.status
-            }
-        }
-
-        if request.htmx:
-            return render(request, 'dashboard/partials/schedule_updated.html', {
-                'schedule': schedule
-            })
-        return JsonResponse(response_data)
-
-    except Schedule.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Schedule not found'
-        }, status=404)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
 
 
 from django.http import HttpResponse
@@ -3120,9 +3030,12 @@ def get_notification_context(request):
 
 @login_required
 @staff_member_required
-def get_schedule(request, pk):
+@login_required
+@staff_member_required
+def get_schedule(request, schedule_id):
+    """API endpoint for getting schedule details"""
     try:
-        schedule = get_object_or_404(Schedule.objects.select_related('vessel', 'route'), pk=pk)
+        schedule = get_object_or_404(Schedule, pk=schedule_id)
         
         return JsonResponse({
             'success': True,
@@ -3132,11 +3045,12 @@ def get_schedule(request, pk):
                 'route_id': schedule.route.id,
                 'departure_datetime': schedule.departure_datetime.isoformat(),
                 'arrival_datetime': schedule.arrival_datetime.isoformat(),
+                'available_seats': schedule.available_seats,
+                'available_cargo_space': schedule.available_cargo_space,
                 'adult_fare': str(schedule.adult_fare),
                 'child_fare': str(schedule.child_fare),
-                'available_seats': schedule.available_seats,
-                'available_cargo_space': str(schedule.available_cargo_space),
                 'status': schedule.status,
+                'notes': schedule.notes
             }
         })
     except Schedule.DoesNotExist:
@@ -3149,6 +3063,8 @@ def get_schedule(request, pk):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
 
 @login_required
 @staff_member_required

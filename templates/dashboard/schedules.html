@@ -140,119 +140,58 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <form id="scheduleForm" method="post" action="{% url 'add_schedule' %}" class="p-6">
+        <form id="scheduleForm" method="post" class="p-6">
             {% csrf_token %}
             <input type="hidden" id="schedule_id" name="schedule_id">
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="vessel" class="block text-sm font-medium text-gray-700 mb-1">Vessel</label>
-                        <select id="vessel" name="vessel" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Select a vessel</option>
-                            {% for vessel in vessels %}
-                            <option value="{{ vessel.id }}" 
-                                    data-capacity-passengers="{{ vessel.capacity_passengers }}"
-                                    data-capacity-cargo="{{ vessel.capacity_cargo }}">
-                                {{ vessel.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label for="route" class="block text-sm font-medium text-gray-700 mb-1">Route</label>
-                        <select id="route" name="route" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Select a route</option>
-                            {% for route in routes %}
-                            <option value="{{ route.id }}" 
-                                    data-duration="{{ route.estimated_duration }}"
-                                    data-origin="{{ route.origin }}"
-                                    data-destination="{{ route.destination }}">
-                                {{ route.origin }} to {{ route.destination }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="vessel" class="block text-sm font-medium text-gray-700 mb-1">Vessel</label>
+                    <select id="vessel" name="vessel" required class="w-full rounded-lg border-gray-300">
+                        <option value="">Select a vessel</option>
+                    </select>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="adult_fare" class="block text-sm font-medium text-gray-700 mb-1">Adult Fare</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
-                            <input type="number" id="adult_fare" name="adult_fare" required min="0" step="0.01"
-                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="child_fare" class="block text-sm font-medium text-gray-700 mb-1">Child Fare</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
-                            <input type="number" id="child_fare" name="child_fare" required min="0" step="0.01"
-                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
+                <div>
+                    <label for="route" class="block text-sm font-medium text-gray-700 mb-1">Route</label>
+                    <select id="route" name="route" required class="w-full rounded-lg border-gray-300">
+                        <option value="">Select a route</option>
+                    </select>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="cargo_rate" class="block text-sm font-medium text-gray-700 mb-1">Cargo Rate (per kg)</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
-                            <input type="number" id="cargo_rate" name="cargo_rate" required min="0" step="0.01"
-                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label for="vehicle_rate" class="block text-sm font-medium text-gray-700 mb-1">Vehicle Rate</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
-                            <input type="number" id="vehicle_rate" name="vehicle_rate" required min="0" step="0.01"
-                                class="w-full pl-8 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
+                <div>
+                    <label for="departure_datetime" class="block text-sm font-medium text-gray-700 mb-1">Departure Time</label>
+                    <input type="datetime-local" id="departure_datetime" name="departure_datetime" required class="w-full rounded-lg border-gray-300">
                 </div>
-
-                <!-- Existing fields -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="departure_datetime" class="block text-sm font-medium text-gray-700 mb-1">Departure Date & Time</label>
-                        <input type="datetime-local" id="departure_datetime" name="departure_datetime" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label for="arrival_datetime" class="block text-sm font-medium text-gray-700 mb-1">Arrival Date & Time</label>
-                        <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                <div>
+                    <label for="arrival_datetime" class="block text-sm font-medium text-gray-700 mb-1">Arrival Time</label>
+                    <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required class="w-full rounded-lg border-gray-300">
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="available_seats" class="block text-sm font-medium text-gray-700 mb-1">Available Seats</label>
-                        <input type="number" id="available_seats" name="available_seats" min="0" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label for="available_cargo_space" class="block text-sm font-medium text-gray-700 mb-1">Available Cargo Space (tons)</label>
-                        <input type="number" id="available_cargo_space" name="available_cargo_space" min="0" step="0.1" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                <div>
+                    <label for="available_seats" class="block text-sm font-medium text-gray-700 mb-1">Available Seats</label>
+                    <input type="number" id="available_seats" name="available_seats" required class="w-full rounded-lg border-gray-300">
+                </div>
+                <div>
+                    <label for="available_cargo_space" class="block text-sm font-medium text-gray-700 mb-1">Available Cargo Space (tons)</label>
+                    <input type="number" id="available_cargo_space" name="available_cargo_space" required class="w-full rounded-lg border-gray-300" step="0.1">
+                </div>
+                <div>
+                    <label for="adult_fare" class="block text-sm font-medium text-gray-700 mb-1">Adult Fare</label>
+                    <input type="number" id="adult_fare" name="adult_fare" required class="w-full rounded-lg border-gray-300" step="0.01">
+                </div>
+                <div>
+                    <label for="child_fare" class="block text-sm font-medium text-gray-700 mb-1">Child Fare</label>
+                    <input type="number" id="child_fare" name="child_fare" required class="w-full rounded-lg border-gray-300" step="0.01">
                 </div>
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select id="status" name="status" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <select id="status" name="status" required class="w-full rounded-lg border-gray-300">
                         <option value="scheduled">Scheduled</option>
                         <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="canceled">Canceled</option>
                     </select>
                 </div>
-                <div>
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                    <textarea id="notes" name="notes" rows="3"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                <div class="col-span-2">
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea id="notes" name="notes" class="w-full rounded-lg border-gray-300" rows="3"></textarea>
                 </div>
             </div>
             <div class="mt-6 flex justify-end">
@@ -499,43 +438,78 @@
             submitButtonText.textContent = 'Update Schedule';
             scheduleForm.action = `/dashboard/schedules/${scheduleId}/edit/`;
             
-            // Fetch schedule data
-            fetch(`/dashboard/schedules/${scheduleId}/get/`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Populate form with schedule data
-                    document.getElementById('schedule_id').value = data.schedule.id;
-                    document.getElementById('vessel').value = data.schedule.vessel_id;
-                    
-                    // Format datetime values for datetime-local input
-                    const departureDate = new Date(data.schedule.departure_datetime);
-                    const arrivalDate = new Date(data.schedule.arrival_datetime);
-                    
-                    document.getElementById('departure_datetime').value = formatDatetimeLocal(departureDate);
-                    document.getElementById('arrival_datetime').value = formatDatetimeLocal(arrivalDate);
-                    
-                    document.getElementById('available_seats').value = data.schedule.available_seats;
-                    document.getElementById('available_cargo_space').value = data.schedule.available_cargo_space;
-                    document.getElementById('status').value = data.schedule.status;
-                    
-                    if (data.schedule.notes) {
-                        document.getElementById('notes').value = data.schedule.notes;
+            // Fetch all necessary data in parallel
+            Promise.all([
+                // Fetch schedule data
+                fetch(`/dashboard/schedules/${scheduleId}/get/`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
                     }
+                }).then(response => response.json()),
+                
+                // Fetch vessels
+                fetch("{% url 'get_vessels' %}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    }
+                }).then(response => response.json()),
+                
+                // Fetch routes
+                fetch("{% url 'get_routes' %}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    }
+                }).then(response => response.json())
+            ])
+            .then(([scheduleData, vesselsData, routesData]) => {
+                if (scheduleData.success && vesselsData.success && routesData.success) {
+                    // Populate vessels dropdown
+                    const vesselSelect = document.getElementById('vessel');
+                    vesselSelect.innerHTML = '<option value="">Select a vessel</option>';
+                    vesselsData.vessels.forEach(vessel => {
+                        const option = document.createElement('option');
+                        option.value = vessel.id;
+                        option.textContent = vessel.name;
+                        option.dataset.capacityPassengers = vessel.capacity_passengers;
+                        option.dataset.capacityCargo = vessel.capacity_cargo;
+                        vesselSelect.appendChild(option);
+                    });
+
+                    // Populate routes dropdown
+                    const routeSelect = document.getElementById('route');
+                    routeSelect.innerHTML = '<option value="">Select a route</option>';
+                    routesData.routes.forEach(route => {
+                        const option = document.createElement('option');
+                        option.value = route.id;
+                        option.textContent = `${route.origin} to ${route.destination}`;
+                        routeSelect.appendChild(option);
+                    });
+
+                    // Populate form with schedule data
+                    document.getElementById('schedule_id').value = scheduleData.schedule.id;
+                    document.getElementById('vessel').value = scheduleData.schedule.vessel_id;
+                    document.getElementById('route').value = scheduleData.schedule.route_id;
+                    document.getElementById('departure_datetime').value = formatDatetimeLocal(new Date(scheduleData.schedule.departure_datetime));
+                    document.getElementById('arrival_datetime').value = formatDatetimeLocal(new Date(scheduleData.schedule.arrival_datetime));
+                    document.getElementById('available_seats').value = scheduleData.schedule.available_seats;
+                    document.getElementById('available_cargo_space').value = scheduleData.schedule.available_cargo_space;
+                    document.getElementById('adult_fare').value = scheduleData.schedule.adult_fare;
+                    document.getElementById('child_fare').value = scheduleData.schedule.child_fare;
+                    document.getElementById('status').value = scheduleData.schedule.status;
+                    document.getElementById('notes').value = scheduleData.schedule.notes || '';
                     
                     // Show modal
                     addModal.classList.remove('hidden');
                 } else {
-                    alert('Error: ' + data.error);
+                    alert('Error: Failed to fetch necessary data');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while fetching schedule data.');
+                alert('An error occurred while fetching data.');
             });
         };
         window.openDeleteScheduleModal = function(scheduleId) {
@@ -585,9 +559,10 @@
         document.getElementById('vessel').addEventListener('change', function() {
             const vesselId = this.value;
             if (vesselId) {
-                fetch(`/dashboard/vessels/${vesselId}/capacity/`, {
+                fetch(`/vessels/${vesselId}/capacity/`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
                     }
                 })
                 .then(response => response.json())

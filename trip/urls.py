@@ -42,12 +42,15 @@ urlpatterns = [
     path('dashboard/bookings/<int:pk>/print/', views.booking_print, name='booking_print'),
      path('vessels/get/', views.get_vessels, name='get_vessels'),
     path('routes/get/', views.get_routes, name='get_routes'),
+    path('vessels/<int:vessel_id>/capacity/', views.get_vessel_capacity, name='get_vessel_capacity'),
+    path('dashboard/schedules/<int:schedule_id>/get/', views.get_schedule, name='get_schedule'),
+    path('dashboard/schedules/<int:schedule_id>/edit/', views.edit_schedule, name='edit_schedule'),
     # API endpoints
     path('api/add-vessel/', views.add_vessel, name='add_vessel'),
     path('api/add-schedule/', views.add_schedule, name='add_schedule'),
-    path('api/edit-schedule/<int:pk>/', views.edit_schedule, name='edit_schedule'),
+
     path('api/delete-schedule/<int:pk>/', views.schedule_delete, name='delete_schedule'),
-    path('api/get-schedule/<int:pk>/', views.get_schedule, name='get_schedule'),
+    # path('api/get-schedule/<int:pk>/', views.get_schedule, name='get_schedule'),
     path('api/get-vessel-capacity/<int:vessel_id>/', views.get_vessel_capacity, name='get_vessel_capacity'),
 
     path('generate-qr-code/<str:booking_reference>/', views.generate_qr_code, name='generate_qr_code'),
@@ -80,7 +83,7 @@ urlpatterns = [
     path('vehicle-types/<int:id>/', views.get_vehicle_type, name='get_vehicle_type'),
 
     path('vehicle-types/', views.vehicle_types_view, name='vehicle_types'),
-      path('vehicle-types/get/', views.get_vehicle_types, name='get_vehicle_types'),
+    path('vehicle-types/get/', views.get_vehicle_types, name='get_vehicle_types'),
 
     path('calculate-vehicle-fare/', views.calculate_vehicle_fare, name='calculate_vehicle_fare'),
     path('calculate-fare/', views.calculate_fare, name='calculate_fare'),
@@ -89,6 +92,9 @@ urlpatterns = [
     path('dashboard/routes/<int:pk>/', views.get_route, name='get_route'),
     path('dashboard/routes/<int:pk>/edit/', views.edit_route, name='edit_route'),
     path('dashboard/routes/<int:pk>/delete/', views.delete_route, name='delete_route'),
-    path('dashboard/schedules/<int:pk>/get/', views.get_schedule, name='get_schedule'),
+ 
     path('dashboard/schedules/<int:pk>/delete/', views.schedule_delete, name='schedule_delete'),
+   
+    path('dashboard/schedules/<int:schedule_id>/get/', views.get_schedule, name='get_schedule'),
+
 ]
