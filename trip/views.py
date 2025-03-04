@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -279,18 +279,6 @@ def get_schedule_fares(request, schedule_id):
         'child_fare': str(schedule.child_fare)
     })
 
-def calculate_booking_payment(booking):
-    if booking.booking_type == 'passenger':
-        base_fare = 50
-        cargo_fee = 30 * (booking.cargo_weight or 0)
-        return base_fare * booking.number_of_passengers + cargo_fee
-    elif booking.booking_type == 'vehicle':
-        base_price = booking.vehicle_type.max_cargo_weight * 50 if booking.vehicle_type else 100
-        occupant_fee = 20 * booking.occupant_count
-        cargo_fee = 30 * (booking.cargo_weight or 0)
-        return base_price + occupant_fee + cargo_fee
-    return 0
-
 def get_booking_details(request, booking_reference):
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
@@ -358,17 +346,15 @@ logger = logging.getLogger(__name__)
 @require_http_methods(["POST"])
 def process_payment_htmx(request):
     booking_reference = request.POST.get('booking_reference')
-    logger.info(f"Processing payment for booking: {booking_reference}")
+
     
     try:
         total_amount = Decimal(request.POST.get('total_amount', '0'))
         amount_received = Decimal(request.POST.get('amount_received', '0'))
         
-        logger.debug(f"Payment details - Total: ₱{total_amount}, Received: ₱{amount_received}")
         
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
-        logger.debug(f"Found booking - Customer: {booking.full_name}, Contact: {booking.contact_number}")
-        
+
         if amount_received < total_amount:
             logger.warning(f"Insufficient payment - Expected: ₱{total_amount}, Received: ₱{amount_received}")
             return HttpResponseBadRequest("Amount received is less than total amount")
@@ -389,28 +375,6 @@ def process_payment_htmx(request):
         booking.is_paid = True
         booking.payment = payment
         booking.save()
-        logger.info("Booking marked as paid")
-        
-        # Send confirmation email after payment is recorded
-        try:
-            email_sent = send_booking_confirmation_email(booking)
-            if email_sent:
-                logger.info("Confirmation email sent successfully")
-            else:
-                logger.warning("Failed to send confirmation email")
-        except Exception as email_error:
-            logger.error(f"Email sending error: {str(email_error)}", exc_info=True)
-            # Continue processing even if email fails
-        
-        # Send SMS confirmation
-        logger.info("Initiating SMS confirmation...")
-        sms_sid = send_payment_confirmation_sms(booking, payment)
-        
-        if sms_sid:
-            logger.info(f"SMS confirmation sent successfully - SID: {sms_sid}")
-        else:
-            logger.warning("SMS confirmation failed, but payment was processed")
-        
         return HttpResponseRedirect(reverse('print_ticket', args=[booking_reference]))
         
     except Exception as e:
@@ -960,14 +924,28 @@ def get_schedule_fares(request, schedule_id):
         'child_fare': str(schedule.child_fare)
     })
 
+from decimal import Decimal
+
+def calculate_total_fare(self):
+    # If booking type is 'vehicle', skip fare calculations
+    if self.booking_type == 'vehicle':
+        return Decimal('0.00')
+
+    adult_rate = self.adult_fare_rate if self.adult_fare_rate is not None else Decimal('0.00')
+    child_rate = self.child_fare_rate if self.child_fare_rate is not None else Decimal('0.00')
+    adult_total = self.adult_passengers * adult_rate
+    child_total = self.child_passengers * child_rate
+    return adult_total + child_total
 def calculate_booking_payment(booking):
     if booking.booking_type == 'passenger':
         base_fare = 50
         cargo_fee = 30 * (booking.cargo_weight or 0)
-        return base_fare * booking.number_of_passengers + cargo_fee
+        return base_fare * (booking.number_of_passengers or 0) + cargo_fee
     elif booking.booking_type == 'vehicle':
-        base_price = booking.vehicle_type.max_cargo_weight * 50 if booking.vehicle_type else 100
-        occupant_fee = 20 * booking.occupant_count
+        # Use 0 as fallback if booking.vehicle_type.max_cargo_weight is None
+        base_price = ((booking.vehicle_type.max_cargo_weight or 0) * 50
+                      if booking.vehicle_type else 100)
+        occupant_fee = 20 * (booking.occupant_count or 0)
         cargo_fee = 30 * (booking.cargo_weight or 0)
         return base_price + occupant_fee + cargo_fee
     return 0
@@ -1632,17 +1610,7 @@ def get_schedule_fares(request, schedule_id):
         'child_fare': str(schedule.child_fare)
     })
 
-def calculate_booking_payment(booking):
-    if booking.booking_type == 'passenger':
-        base_fare = 50
-        cargo_fee = 30 * (booking.cargo_weight or 0)
-        return base_fare * booking.number_of_passengers + cargo_fee
-    elif booking.booking_type == 'vehicle':
-        base_price = booking.vehicle_type.max_cargo_weight * 50 if booking.vehicle_type else 100
-        occupant_fee = 20 * booking.occupant_count
-        cargo_fee = 30 * (booking.cargo_weight or 0)
-        return base_price + occupant_fee + cargo_fee
-    return 0
+
 
 def get_booking_details(request, booking_reference):
     try:
@@ -1769,6 +1737,12 @@ def booking(request):
 
 
 from .utils import generate_booking_reference
+from decimal import Decimal
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from .models import Schedule, Booking, VehicleType
+from .utils import generate_booking_reference  # Assuming your utility function is in utils.py
+
 def create_booking(request):
     """Process the booking form submission"""
     if request.method != 'POST':
@@ -1780,7 +1754,7 @@ def create_booking(request):
         if not schedule_id:
             messages.error(request, "No schedule selected.")
             return redirect('booking')
-            
+        
         schedule = get_object_or_404(Schedule, id=schedule_id)
         
         # Get common booking data
@@ -1812,17 +1786,20 @@ def create_booking(request):
             booking.plate_number = request.POST.get('plate_number', '')
             booking.occupant_count = int(request.POST.get('occupant_count', 1) or 1)
             booking.cargo_weight = Decimal(request.POST.get('cargo_weight', 0) or 0)
+            # Set fare rates to 0 for vehicle bookings to satisfy NOT NULL constraint
+            booking.adult_fare_rate = Decimal('0.00')
+            booking.child_fare_rate = Decimal('0.00')
         
         # Save the booking
         booking.save()
         # Redirect to payment
         messages.success(request, "Booking created successfully. Please complete your payment.")
-        return redirect('payment', booking_reference=booking.booking_reference)  # Changed from 'payment_view' to 'payment'
+        return redirect('payment', booking_reference=booking.booking_reference)
         
     except Exception as e:
         messages.error(request, f"Error creating booking: {str(e)}")
         return redirect('booking')
-
+    
 def get_schedule_fares(request, schedule_id):
     """API endpoint to get fare information for a specific schedule"""
     schedule = get_object_or_404(Schedule, id=schedule_id)
@@ -2349,19 +2326,21 @@ def delete_route(request, pk):
 @login_required
 @staff_member_required
 def booking_view(request, pk):
-    """View for displaying detailed booking information"""
     booking = get_object_or_404(Booking, pk=pk)
     
+    # Calculate total fare based on booking type
+    if booking.booking_type == 'vehicle':
+        total_fare = booking.vehicle_type.base_fare if booking.vehicle_type else 0
+    else:
+        total_fare = (
+            booking.adult_passengers * booking.schedule.adult_fare +
+            booking.child_passengers * booking.schedule.child_fare
+        )
+
     context = {
         'booking': booking,
         'active_tab': 'bookings',
-        # Calculate total fare
-        'total_fare': (
-            booking.adult_passengers * booking.schedule.adult_fare +
-            booking.child_passengers * booking.schedule.child_fare +
-            (booking.vehicle_type.fare if booking.vehicle_type else 0)
-        ),
-        # Get related payment if exists
+        'total_fare': total_fare,
         'payment': booking.payment_set.first(),
     }
    

@@ -10,7 +10,11 @@
         <div class="border-b pb-4 mb-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-gray-800">
-                    Booking #{{ booking.booking_reference }}
+                    {% if booking.booking_type == 'vehicle' %}
+                        Vehicle Booking #{{ booking.booking_reference }}
+                    {% else %}
+                        Booking #{{ booking.booking_reference }}
+                    {% endif %}
                 </h2>
                 <div class="flex space-x-2">
                     {% if not booking.is_paid %}
@@ -19,7 +23,6 @@
                         Process Payment
                     </a>
                     {% endif %}                
-                  
                 </div>
             </div>
             <p class="text-gray-600 mt-2">Created on {{ booking.created_at|date:"F d, Y H:i" }}</p>
@@ -69,29 +72,6 @@
                 </div>
             </div>
 
-            <!-- Passenger Details -->
-            {% if booking.booking_type == 'passenger' %}
-            <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-gray-800">Passenger Details</h3>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <dl class="space-y-2">
-                        <div class="flex justify-between">
-                            <dt class="text-gray-600">Adult Passengers:</dt>
-                            <dd class="font-medium">{{ booking.adult_passengers }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-600">Child Passengers:</dt>
-                            <dd class="font-medium">{{ booking.child_passengers }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-600">Total Passengers:</dt>
-                            <dd class="font-medium">{{ booking.adult_passengers|add:booking.child_passengers }}</dd>
-                        </div>
-                    </dl>
-                </div>
-            </div>
-            {% endif %}
-
             <!-- Vehicle Details -->
             {% if booking.booking_type == 'vehicle' %}
             <div class="space-y-4">
@@ -102,12 +82,22 @@
                             <dt class="text-gray-600">Vehicle Type:</dt>
                             <dd class="font-medium">{{ booking.vehicle_type.name }}</dd>
                         </div>
+                        {% if booking.plate_number %}
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Plate Number:</dt>
+                            <dd class="font-medium">{{ booking.plate_number }}</dd>
+                        </div>
+                        {% endif %}
                         {% if booking.cargo_weight %}
                         <div class="flex justify-between">
                             <dt class="text-gray-600">Cargo Weight:</dt>
                             <dd class="font-medium">{{ booking.cargo_weight }} kg</dd>
                         </div>
                         {% endif %}
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Base Fare:</dt>
+                            <dd class="font-medium">₱{{ booking.vehicle_type.base_fare|floatformat:2 }}</dd>
+                        </div>
                     </dl>
                 </div>
             </div>

@@ -8,8 +8,16 @@
             {% for booking in pending_bookings %}
             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
                 <div>
-                    <p class="font-medium">Booking #{{ booking.booking_reference }}</p>
-                    <p class="text-sm text-gray-600">Amount: ₱{{ booking.total_amount }}</p>
+                    {% if booking.booking_type == 'vehicle' %}
+                      <p class="font-medium">Vehicle Booking #{{ booking.booking_reference }}</p>
+                      {% if booking.plate_number %}
+                      <p class="text-sm text-gray-600">Plate: {{ booking.plate_number }}</p>
+                      {% endif %}
+                      {# Optionally, add occupant count or cargo weight here if needed #}
+                    {% else %}
+                      <p class="font-medium">Booking #{{ booking.booking_reference }}</p>
+                      <p class="text-sm text-gray-600">Amount: ₱{{ booking.total_amount }}</p>
+                    {% endif %}
                     <p class="text-xs text-gray-500">{{ booking.created_at|timesince }} ago</p>
                 </div>
                 <a href="{% url 'booking_view' booking.pk %}" 

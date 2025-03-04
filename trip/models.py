@@ -5,7 +5,7 @@ from django.utils import timezone
 import qrcode
 import io
 import uuid
-
+from decimal import Decimal
 # --------------------------------
 # 1. VESSEL & SCHEDULE MANAGEMENT
 # --------------------------------
@@ -185,9 +185,17 @@ class Booking(models.Model):
         validators=[MinValueValidator(0)]
     )
 
+ 
+    
     def calculate_total_fare(self):
-        adult_total = self.adult_passengers * self.adult_fare_rate
-        child_total = self.child_passengers * self.child_fare_rate
+        # For vehicle bookings, fare calculation is not applicable.
+        if self.booking_type == 'vehicle':
+            return Decimal('0.00')
+        
+        adult_rate = self.adult_fare_rate if self.adult_fare_rate is not None else Decimal('0.00')
+        child_rate = self.child_fare_rate if self.child_fare_rate is not None else Decimal('0.00')
+        adult_total = self.adult_passengers * adult_rate
+        child_total = self.child_passengers * child_rate
         return adult_total + child_total
 
     def __str__(self):
