@@ -72,24 +72,92 @@ def logout_view(request):
 
 @login_required
 @staff_member_required
+@login_required
+@staff_member_required
 def dashboard_home(request):
     today = timezone.now().date()
-    vehicle_types = VehicleType.objects.all()
+    current_date = timezone.now()
+    thirty_days_ago = current_date - timezone.timedelta(days=30)
+
+    # Calculate booking growth
+    previous_month_bookings = Booking.objects.filter(
+        created_at__lt=thirty_days_ago
+    ).count()
+    current_month_bookings = Booking.objects.filter(
+        created_at__gte=thirty_days_ago
+    ).count()
+    booking_growth = (
+        ((current_month_bookings - previous_month_bookings) / previous_month_bookings * 100)
+        if previous_month_bookings > 0 else 0
+    )
+
+    # Calculate revenue growth
+    previous_month_revenue = Payment.objects.filter(
+        payment_date__lt=thirty_days_ago
+    ).aggregate(total=models.Sum('amount_paid'))['total'] or 0
+    current_month_revenue = Payment.objects.filter(
+        payment_date__gte=thirty_days_ago
+    ).aggregate(total=models.Sum('amount_paid'))['total'] or 0
+    revenue_growth = (
+        ((current_month_revenue - previous_month_revenue) / previous_month_revenue * 100)
+        if previous_month_revenue > 0 else 0
+    )
+
+    # Get active routes with additional data needed for the template
+    active_routes_list = Route.objects.filter(
+        active=True
+    ).annotate(
+        schedule_count=models.Count('schedule')
+    ).order_by('-schedule_count')[:4]
+
+    # Get upcoming schedules with all related data needed for the template
+    upcoming_schedules = Schedule.objects.select_related(
+        'vessel', 
+        'route'
+    ).filter(
+        departure_datetime__gte=timezone.now(),
+        status='scheduled'
+    ).order_by('departure_datetime')[:6]
+
+    # Calculate available seats and cargo space for each schedule
+    for schedule in upcoming_schedules:
+        schedule.available_seats = schedule.get_available_seats()
+        schedule.available_cargo_space = schedule.get_available_cargo_space()
+
+    # Get recent bookings with related schedule and route information
+    recent_bookings = Booking.objects.select_related(
+        'schedule',
+        'schedule__route'
+    ).order_by('-created_at')[:5]
+
+    # Calculate total revenue
+    total_revenue = Payment.objects.aggregate(
+        total=models.Sum('amount_paid')
+    )['total'] or 0
+
     context = {
+        # Card metrics
         'total_bookings': Booking.objects.count(),
-        'total_revenue': Payment.objects.aggregate(total=models.Sum('amount_paid'))['total'] or 0,
+        'booking_growth': booking_growth,
+        'total_revenue': total_revenue,
+        'revenue_growth': revenue_growth,
         'active_vessels': Vessel.objects.filter(active=True).count(),
-        'active_routes': Route.objects.filter(active=True).count(),
         'todays_schedules': Schedule.objects.filter(
             departure_datetime__date=today,
             status='scheduled'
         ).count(),
-        'recent_bookings': Booking.objects.order_by('-created_at')[:5],
-        'upcoming_schedules': Schedule.objects.filter(
-            departure_datetime__gte=timezone.now(),
-            status='scheduled'
-        ).order_by('departure_datetime')[:6],
-        'vehicle_types': vehicle_types,
+
+        # Recent bookings table
+        'recent_bookings': recent_bookings,
+
+        # Upcoming schedules section
+        'upcoming_schedules': upcoming_schedules,
+
+        # Active routes section
+        'active_routes_list': active_routes_list,
+
+        # Quick actions section
+        'vehicle_types': VehicleType.objects.all(),
     }
     
     return render(request, 'dashboard/home.html', context)

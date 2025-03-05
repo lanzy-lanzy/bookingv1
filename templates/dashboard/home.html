@@ -158,16 +158,28 @@
     <div class="p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             {% for route in active_routes_list|slice:":4" %}
-            <div class="border rounded-lg p-4 flex items-center">
-                <div class="bg-blue-100 rounded-full p-3 mr-4">
-                    <i class="fas fa-route text-blue-600"></i>
+            <div class="border rounded-lg p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 rounded-full p-3 mr-4">
+                            <i class="fas fa-route text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-900">{{ route.name }}</h3>
+                            <p class="text-sm text-gray-600">{{ route.origin }} to {{ route.destination }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Active</span>
+                    </div>
                 </div>
-                <div class="flex-1">
-                    <h3 class="font-medium">{{ route.name }}</h3>
-                    <p class="text-sm text-gray-600">{{ route.origin }} to {{ route.destination }}</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-sm text-gray-500">{{ route.estimated_duration }}</span>
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="flex justify-between items-center text-sm text-gray-500">
+                        <span><i class="fas fa-clock mr-2"></i>{{ route.estimated_duration }}</span>
+                        <a href="{% url 'schedules' %}?route={{ route.id }}" class="text-blue-600 hover:text-blue-800">
+                            View Schedules <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
             {% empty %}

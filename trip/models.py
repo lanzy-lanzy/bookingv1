@@ -76,6 +76,42 @@ class Schedule(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
     notes = models.TextField(blank=True, null=True)
 
+    def get_available_seats(self):
+        """Calculate remaining passenger seats"""
+        # Get total passenger capacity from vessel
+        total_capacity = self.vessel.capacity_passengers
+        
+        # Get total booked passengers for this schedule
+        booked_passengers = Booking.objects.filter(
+            schedule=self,
+            booking_type='passenger'
+        ).aggregate(
+            total=models.Sum(
+                models.F('adult_passengers') + models.F('child_passengers'),
+                output_field=models.IntegerField()
+            )
+        )['total'] or 0
+        
+        return total_capacity - booked_passengers
+    
+    def get_available_cargo_space(self):
+        """Calculate remaining cargo space"""
+        # Get total cargo capacity from vessel
+        total_capacity = self.vessel.capacity_cargo
+
+        # Get total booked cargo for this schedule
+        booked_cargo = Booking.objects.filter(
+            schedule=self,
+            booking_type='cargo'
+        ).aggregate(
+            total=models.Sum(
+                models.F('cargo_weight'),
+                output_field=models.FloatField()
+            )
+        )['total'] or 0
+
+        return total_capacity - booked_cargo    
+
     def __str__(self):
         return f"{self.vessel.name} - {self.route.name} - {self.departure_datetime.strftime('%Y-%m-%d %H:%M')}"
 
