@@ -283,8 +283,9 @@ class Booking(models.Model):
         if self.booking_type == 'passenger':
             return (self.adult_passengers * self.adult_fare_rate) + (self.child_passengers * self.child_fare_rate)
         elif self.booking_type == 'vehicle':
-            return self.vehicle_type.fare if self.vehicle_type else 0
-        return 0
+            # Only return the base fare for vehicles
+            return self.vehicle_type.base_fare if self.vehicle_type else Decimal('0.00')
+        return Decimal('0.00')
 
 # --------------------------------
 # 4. PAYMENT

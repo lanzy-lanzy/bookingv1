@@ -608,35 +608,25 @@ def calculate_fare(request):
 def payment_view(request, booking_reference):
     try:
         booking = Booking.objects.get(booking_reference=booking_reference)
-        
-        # Calculate total payment amount
+        payment_amount = Decimal('0.00')
+
         if booking.booking_type == 'passenger':
-            adult_total = booking.adult_passengers * booking.schedule.adult_fare
-            child_total = booking.child_passengers * booking.schedule.child_fare
-            payment_amount = adult_total + child_total
-        else:  # vehicle booking
-            base_price = booking.vehicle_type.base_fare if booking.vehicle_type else Decimal('0.00')
-            occupant_fee = Decimal('20.00')  # Fee per occupant
-            occupant_total = occupant_fee * booking.occupant_count
-            payment_amount = base_price + occupant_total
+            # Ensure we have valid numbers for calculation
+            adult_passengers = int(booking.adult_passengers or 0)
+            child_passengers = int(booking.child_passengers or 0)
+            adult_fare = booking.schedule.adult_fare or Decimal('0.00')
+            child_fare = booking.schedule.child_fare or Decimal('0.00')
 
-            # Add cargo fee if applicable
-            if booking.cargo_weight:
-                cargo_rate = Decimal('50.00')  # Rate per ton
-                cargo_total = cargo_rate * Decimal(str(booking.cargo_weight))
-                payment_amount += cargo_total
+            payment_amount = (adult_passengers * adult_fare) + (child_passengers * child_fare)
 
-        context = {
+        elif booking.booking_type == 'vehicle':
+            # Only use the base fare for vehicle bookings
+            payment_amount = booking.vehicle_type.base_fare if booking.vehicle_type else Decimal('0.00')
+
+        return render(request, 'payment.html', {
             'booking': booking,
-            'payment_amount': payment_amount,
-            'adult_total': adult_total if booking.booking_type == 'passenger' else None,
-            'child_total': child_total if booking.booking_type == 'passenger' else None,
-            'base_price': base_price if booking.booking_type == 'vehicle' else None,
-            'occupant_total': occupant_total if booking.booking_type == 'vehicle' else None,
-            'cargo_total': cargo_total if booking.booking_type == 'vehicle' and booking.cargo_weight else None,
-        }
-        
-        return render(request, 'payment.html', context)
+            'payment_amount': payment_amount
+        })
         
     except Booking.DoesNotExist:
         messages.error(request, "Invalid booking reference.")
@@ -1206,28 +1196,20 @@ def payment_view(request, booking_reference):
         booking = Booking.objects.get(booking_reference=booking_reference)
         payment_amount = Decimal('0.00')
 
-        if booking.booking_type == 'passenger':
-            # Ensure we have valid numbers for calculation
+        if booking.booking_type == 'vehicle':
+            # Add logging to track the amount
+            base_fare = booking.vehicle_type.base_fare if booking.vehicle_type else Decimal('0.00')
+            print(f"Vehicle base fare: {base_fare}")  # Debug log
+            payment_amount = base_fare
+
+        elif booking.booking_type == 'passenger':
             adult_passengers = int(booking.adult_passengers or 0)
             child_passengers = int(booking.child_passengers or 0)
             adult_fare = booking.schedule.adult_fare or Decimal('0.00')
             child_fare = booking.schedule.child_fare or Decimal('0.00')
-
             payment_amount = (adult_passengers * adult_fare) + (child_passengers * child_fare)
 
-        elif booking.booking_type == 'vehicle':
-            # Calculate vehicle fare
-            base_price = Decimal(str(booking.vehicle_type.base_fare)) if booking.vehicle_type else Decimal('0.00')
-            occupant_count = int(booking.occupant_count or 1)
-            occupant_fee = Decimal('20.00')  # Fee per occupant
-
-            payment_amount = base_price + (occupant_fee * occupant_count)
-
-            # Add cargo fee if applicable
-            if booking.cargo_weight:
-                cargo_rate = Decimal('50.00')  # Rate per ton
-                cargo_weight = Decimal(str(booking.cargo_weight or 0))
-                payment_amount += cargo_weight * cargo_rate
+        print(f"Final payment amount: {payment_amount}")  # Debug log
 
         return render(request, 'payment.html', {
             'booking': booking,
@@ -1915,17 +1897,7 @@ def payment_view(request, booking_reference):
         elif booking.booking_type == 'vehicle':
             # Calculate vehicle fare
             base_price = Decimal(str(booking.vehicle_type.base_fare)) if booking.vehicle_type else Decimal('0.00')
-            occupant_count = int(booking.occupant_count or 1)
-            occupant_fee = Decimal('20.00')  # Fee per occupant
-
-            payment_amount = base_price + (occupant_fee * occupant_count)
-
-            # Add cargo fee if applicable
-            if booking.cargo_weight:
-                cargo_rate = Decimal('50.00')  # Rate per ton
-                cargo_weight = Decimal(str(booking.cargo_weight or 0))
-                payment_amount += cargo_weight * cargo_rate
-
+            payment_amount = base_price
         return render(request, 'payment.html', {
             'booking': booking,
             'payment_amount': payment_amount

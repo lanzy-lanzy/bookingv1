@@ -1,5 +1,5 @@
 {% load booking_extras %}
-
+{% load humanize %}
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
         <thead>
@@ -35,12 +35,12 @@
                 <td class="px-6 py-4 font-medium">
                     {% if booking.booking_type == 'passenger' %}
                         {% with adult_total=booking.adult_passengers|default:0|multiply:booking.schedule.adult_fare child_total=booking.child_passengers|default:0|multiply:booking.schedule.child_fare %}
-                        ₱{{ adult_total|add:child_total|floatformat:2 }}
+                        ₱{{ adult_total|add:child_total|floatformat:2|intcomma }}
                         {% endwith %}
                     {% elif booking.booking_type == 'vehicle' %}
-                        {{ booking.schedule.vehicle_rate|floatformat:2 }}
+                        ₱{{ booking.vehicle_type.base_fare|floatformat:2|intcomma }}
                     {% elif booking.booking_type == 'cargo' %}
-                        ₱{{ booking.schedule.cargo_rate|floatformat:2 }}
+                        ₱{{ booking.schedule.cargo_rate|floatformat:2|intcomma }}
                     {% else %}
                         ₱0.00
                     {% endif %}

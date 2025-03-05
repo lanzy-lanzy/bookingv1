@@ -116,7 +116,7 @@
                             </div>
                             <div class="flex items-center">
                                 <i class="fas fa-money-bill text-gray-400 w-5 mr-2"></i>
-                                <span class="text-gray-600">₱{{ booking.vehicle_type.fare }}</span>
+                                <span class="text-gray-600">₱{{ booking.vehicle_type.base_fare }}</span>
                             </div>
                             <div class="flex items-center">
                                 <i class="fas fa-id-card text-gray-400 w-5 mr-2"></i>
@@ -163,7 +163,7 @@
                         </p>
                         <p class="flex justify-between">
                             <span class="text-blue-100">Vehicle Fare:</span>
-                            <span class="font-medium">₱{{ booking.vehicle_fare_total }}</span>
+                            <span class="font-medium">₱{{ booking.vehicle_type.base_fare|floatformat:2 }}</span>
                         </p>
                         <p class="flex justify-between">
                             <span class="text-blue-100">Plate Number:</span>
@@ -252,21 +252,23 @@
                               </div>
                           </div>
                           <!-- Submit Button -->
-                          <button type="submit" 
-                                  class="w-full bg-green-600 text-white py-4 px-6 rounded-xl hover:bg-green-700 
-                           transition duration-150 ease-in-out flex items-center justify-center"
-                                  hx-post="{% url 'process_payment_htmx' %}"
-                                  hx-target="body"
-                                  hx-swap="outerHTML"
-                                  hx-redirect="{% url 'print_ticket' booking.booking_reference %}"
-                                  hx-indicator="#spinner">
-                              <i class="fas fa-check-circle mr-2"></i>
-                              <span>Confirm Payment</span>
-                              <span id="spinner" class="htmx-indicator ml-2">
-                                  <i class="fas fa-spinner fa-spin"></i>
-                              </span>
-                          </button>
-                      </div>
+                             <button type="submit" 
+                                     class="w-full bg-green-600 text-white py-4 px-6 rounded-xl hover:bg-green-700 
+                              transition duration-150 ease-in-out flex items-center justify-center relative"
+                                     hx-post="{% url 'process_payment_htmx' %}"
+                                     hx-target="body"
+                                     hx-swap="outerHTML"
+                                     hx-redirect="{% url 'print_ticket' booking.booking_reference %}"
+                                     hx-indicator="#spinner">
+                                 <span class="htmx-indicator-hide">
+                                     <i class="fas fa-check-circle mr-2"></i>
+                                     <span>Confirm Payment</span>
+                                 </span>
+                                 <span id="spinner" class="htmx-indicator">
+                                     <i class="fas fa-spinner fa-spin"></i>
+                                 </span>
+                             </button>                     
+                         </div>
                   </form>
               {% endif %}
     </div>

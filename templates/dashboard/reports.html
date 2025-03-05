@@ -1,5 +1,6 @@
 {% extends 'dashboard/base.html' %}
 {% load custom_filters %}
+{% load humanize %}
 
 {% block title %}Reports{% endblock %}
 {% block header %}Analytics & Reports{% endblock %}
@@ -87,7 +88,7 @@
             <i class="fas fa-peso-sign text-green-500"></i>
         </div>
         <div class="flex items-center justify-between">
-            <span class="text-3xl font-bold">₱{{ monthly_revenue|default:"0"|floatformat:2 }}</span>
+            <span class="text-3xl font-bold">₱{{ monthly_revenue|default:"0"|floatformat:2|intcomma }}</span>
             <span class="{% if revenue_growth >= 0 %}text-green-500{% else %}text-red-500{% endif %} text-sm">
                 <i class="fas fa-arrow-{% if revenue_growth >= 0 %}up{% else %}down{% endif %}"></i>
                 {{ revenue_growth|default:"0"|floatformat:1|cut:'-' }}%
@@ -102,7 +103,7 @@
             <i class="fas fa-chart-line text-purple-500"></i>
         </div>
         <div class="flex items-center justify-between">
-            <span class="text-3xl font-bold">₱{{ avg_booking_value|default:"0"|floatformat:2 }}</span>
+            <span class="text-3xl font-bold">₱{{ avg_booking_value|default:"0"|floatformat:2|intcomma }}</span>
             <span class="text-purple-500 text-sm">Per Booking</span>
         </div>
     </div>

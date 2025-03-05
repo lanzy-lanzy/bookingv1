@@ -177,17 +177,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Vehicle Type</label>
-                            <select name="vehicle_type" id="vehicle-type-select" 
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    hx-get="{% url 'calculate_vehicle_fare' %}"
-                                    hx-trigger="change"
-                                    hx-target="#vehicle-fare-details"
-                                    hx-include="[name='vehicle_type']">
-                                <option value="">Select vehicle type</option>
+                            <select id="vehicle_type" name="vehicle_type" class="form-select">
                                 {% for vehicle_type in vehicle_types %}
-                                <option value="{{ vehicle_type.id }}">
-                                    {{ vehicle_type.name }} (Max: {{ vehicle_type.max_occupants }} persons, {{ vehicle_type.max_cargo_weight }}t cargo)
-                                </option>
+                                    <option value="{{ vehicle_type.id }}" data-base-fare="{{ vehicle_type.base_fare }}">
+                                        {{ vehicle_type.name }} - ₱{{ vehicle_type.base_fare }}
+                                    </option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -391,5 +385,23 @@ document.getElementById('booking-form').addEventListener('submit', function(e) {
         alert('Phone number must start with + and country code (e.g., +639123456789)');
     }
 });
+
+function updateVehicleFare() {
+    const vehicleTypeSelect = document.getElementById('vehicle_type');
+    if (!vehicleTypeSelect) return;
+
+    const selectedOption = vehicleTypeSelect.options[vehicleTypeSelect.selectedIndex];
+    if (!selectedOption) return;
+
+    const baseFare = selectedOption.getAttribute('data-base-fare');
+    if (baseFare) {
+        const formattedFare = parseFloat(baseFare).toFixed(2);
+        document.getElementById('vehicle_fare_display').textContent = `₱${formattedFare}`;
+        document.getElementById('total_fare_display').textContent = `₱${formattedFare}`;
+    }
+}
+
+// Add event listener for vehicle type change
+document.getElementById('vehicle_type')?.addEventListener('change', updateVehicleFare);
 </script>
 {% endblock %}

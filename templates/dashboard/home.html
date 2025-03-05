@@ -1,5 +1,5 @@
 {% extends 'dashboard/base.html' %}
-
+{% load humanize%}
 {% block title %}Home{% endblock %}
 {% block header %}Dashboard Overview{% endblock %}
 
@@ -27,7 +27,7 @@
             <i class="fas fa-peso-sign text-green-500"></i>
         </div>
         <div class="flex items-center justify-between">
-            <span class="text-3xl font-bold">₱{{ total_revenue|floatformat:2 }}</span>
+            <span class="text-3xl font-bold">₱{{ total_revenue|intcomma }}</span>
             <span class="{% if revenue_growth >= 0 %}text-green-500{% else %}text-red-500{% endif %} text-sm">
                 <i class="fas fa-arrow-{% if revenue_growth >= 0 %}up{% else %}down{% endif %}"></i>
                 {{ revenue_growth|floatformat:1|cut:'-' }}%
