@@ -414,15 +414,17 @@ logger = logging.getLogger(__name__)
 @require_http_methods(["POST"])
 def process_payment_htmx(request):
     booking_reference = request.POST.get('booking_reference')
-
+    logger.info(f"Processing payment for booking: {booking_reference}")
     
     try:
         total_amount = Decimal(request.POST.get('total_amount', '0'))
         amount_received = Decimal(request.POST.get('amount_received', '0'))
         
+        logger.debug(f"Payment details - Total: ₱{total_amount}, Received: ₱{amount_received}")
         
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
-
+        logger.debug(f"Found booking - Customer: {booking.full_name}, Contact: {booking.contact_number}")
+        
         if amount_received < total_amount:
             logger.warning(f"Insufficient payment - Expected: ₱{total_amount}, Received: ₱{amount_received}")
             return HttpResponseBadRequest("Amount received is less than total amount")
@@ -443,6 +445,19 @@ def process_payment_htmx(request):
         booking.is_paid = True
         booking.payment = payment
         booking.save()
+        logger.info("Booking marked as paid")
+        
+        # Send confirmation email after payment is recorded
+        try:
+            email_sent = send_booking_confirmation_email(booking)
+            if email_sent:
+                logger.info("Confirmation email sent successfully")
+            else:
+                logger.warning("Failed to send confirmation email")
+        except Exception as email_error:
+            logger.error(f"Email sending error: {str(email_error)}", exc_info=True)
+            # Continue processing even if email fails
+        
         return HttpResponseRedirect(reverse('print_ticket', args=[booking_reference]))
         
     except Exception as e:

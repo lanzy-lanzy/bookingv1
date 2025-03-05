@@ -153,7 +153,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'bigbren480@gmail.com'
 EMAIL_HOST_PASSWORD = 'vuhmpiryzbdezrmp'
-EMAIL_TIMEOUT = 60  # Increased timeout
+EMAIL_TIMEOUT = 90  # Increased timeout
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
 
