@@ -133,72 +133,117 @@
 
 <!-- Add/Edit Schedule Modal -->
 <div id="addScheduleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl mx-4">
-        <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h3 id="scheduleModalTitle" class="text-xl font-semibold">Add New Schedule</h3>
-            <button id="closeAddScheduleModal" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times"></i>
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 transform transition-all">
+        <!-- Modal Header -->
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-800 rounded-t-xl">
+            <h3 id="scheduleModalTitle" class="text-2xl font-bold text-white">Add New Schedule</h3>
+            <button id="closeAddScheduleModal" class="text-white hover:text-gray-200 transition-colors">
+                <i class="fas fa-times text-xl"></i>
             </button>
         </div>
+
         <form id="scheduleForm" method="post" class="p-6">
             {% csrf_token %}
             <input type="hidden" id="schedule_id" name="schedule_id">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="vessel" class="block text-sm font-medium text-gray-700 mb-1">Vessel</label>
-                    <select id="vessel" name="vessel" required class="w-full rounded-lg border-gray-300">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Vessel Selection -->
+                <div class="space-y-2">
+                    <label for="vessel" class="block text-sm font-semibold text-gray-700">Vessel</label>
+                    <select id="vessel" name="vessel" required 
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                         <option value="">Select a vessel</option>
                     </select>
                 </div>
-                <div>
-                    <label for="route" class="block text-sm font-medium text-gray-700 mb-1">Route</label>
-                    <select id="route" name="route" required class="w-full rounded-lg border-gray-300">
+
+                <!-- Route Selection -->
+                <div class="space-y-2">
+                    <label for="route" class="block text-sm font-semibold text-gray-700">Route</label>
+                    <select id="route" name="route" required 
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                         <option value="">Select a route</option>
                     </select>
                 </div>
-                <div>
-                    <label for="departure_datetime" class="block text-sm font-medium text-gray-700 mb-1">Departure Time</label>
-                    <input type="datetime-local" id="departure_datetime" name="departure_datetime" required class="w-full rounded-lg border-gray-300">
+
+                <!-- DateTime Inputs -->
+                <div class="space-y-2">
+                    <label for="departure_datetime" class="block text-sm font-semibold text-gray-700">Departure Time</label>
+                    <input type="datetime-local" id="departure_datetime" name="departure_datetime" required 
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                 </div>
-                <div>
-                    <label for="arrival_datetime" class="block text-sm font-medium text-gray-700 mb-1">Arrival Time</label>
-                    <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required class="w-full rounded-lg border-gray-300">
+
+                <div class="space-y-2">
+                    <label for="arrival_datetime" class="block text-sm font-semibold text-gray-700">Arrival Time</label>
+                    <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required 
+                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                 </div>
-                <div>
-                    <label for="available_seats" class="block text-sm font-medium text-gray-700 mb-1">Available Seats</label>
-                    <input type="number" id="available_seats" name="available_seats" required class="w-full rounded-lg border-gray-300">
+
+                <!-- Capacity Inputs -->
+                <div class="space-y-2">
+                    <label for="available_seats" class="block text-sm font-semibold text-gray-700">Available Seats</label>
+                    <div class="relative">
+                        <input type="number" id="available_seats" name="available_seats" required 
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
+                        <i class="fas fa-users absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
-                <div>
-                    <label for="available_cargo_space" class="block text-sm font-medium text-gray-700 mb-1">Available Cargo Space (tons)</label>
-                    <input type="number" id="available_cargo_space" name="available_cargo_space" required class="w-full rounded-lg border-gray-300" step="0.1">
+
+                <div class="space-y-2">
+                    <label for="available_cargo_space" class="block text-sm font-semibold text-gray-700">Available Cargo Space (tons)</label>
+                    <div class="relative">
+                        <input type="number" id="available_cargo_space" name="available_cargo_space" required step="0.1"
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
+                        <i class="fas fa-box absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
-                <div>
-                    <label for="adult_fare" class="block text-sm font-medium text-gray-700 mb-1">Adult Fare</label>
-                    <input type="number" id="adult_fare" name="adult_fare" required class="w-full rounded-lg border-gray-300" step="0.01">
+
+                <!-- Fare Inputs -->
+                <div class="space-y-2">
+                    <label for="adult_fare" class="block text-sm font-semibold text-gray-700">Adult Fare</label>
+                    <div class="relative">
+                        <input type="number" id="adult_fare" name="adult_fare" required step="0.01"
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
+                        <i class="fas fa-dollar-sign absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
-                <div>
-                    <label for="child_fare" class="block text-sm font-medium text-gray-700 mb-1">Child Fare</label>
-                    <input type="number" id="child_fare" name="child_fare" required class="w-full rounded-lg border-gray-300" step="0.01">
+
+                <div class="space-y-2">
+                    <label for="child_fare" class="block text-sm font-semibold text-gray-700">Child Fare</label>
+                    <div class="relative">
+                        <input type="number" id="child_fare" name="child_fare" required step="0.01"
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
+                        <i class="fas fa-dollar-sign absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
                 </div>
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select id="status" name="status" required class="w-full rounded-lg border-gray-300">
+
+                <!-- Status Selection -->
+                <div class="space-y-2">
+                    <label for="status" class="block text-sm font-semibold text-gray-700">Status</label>
+                    <select id="status" name="status" required 
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
                         <option value="scheduled">Scheduled</option>
                         <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="canceled">Canceled</option>
                     </select>
                 </div>
-                <div class="col-span-2">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea id="notes" name="notes" class="w-full rounded-lg border-gray-300" rows="3"></textarea>
+
+                <!-- Notes Textarea -->
+                <div class="col-span-2 space-y-2">
+                    <label for="notes" class="block text-sm font-semibold text-gray-700">Notes</label>
+                    <textarea id="notes" name="notes" rows="3"
+                              class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"></textarea>
                 </div>
             </div>
-            <div class="mt-6 flex justify-end">
-                <button type="button" id="cancelSchedule" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg mr-2 hover:bg-gray-300">
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-3">
+                <button type="button" id="cancelSchedule" 
+                        class="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all">
                     Cancel
                 </button>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                <button type="submit" 
+                        class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
                     <span id="submitButtonText">Add Schedule</span>
                 </button>
             </div>
