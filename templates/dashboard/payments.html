@@ -93,6 +93,10 @@
                                             </div>
                                             {% endif %}
                                             <div class="flex justify-between">
+                                                <span class="text-gray-600">Occupants:</span>
+                                                <span class="font-medium">{{ booking.occupant_count }}</span>
+                                            </div>
+                                            <div class="flex justify-between">
                                                 <span class="text-gray-600">Base Fare:</span>
                                                 <span class="font-medium">₱{{ booking.vehicle_type.base_fare|floatformat:2 }}</span>
                                             </div>
@@ -383,60 +387,33 @@
                 const total = data.total_amount || totalAmount;
                 const change = cashReceived - total;
             
-
-
-
-                const today = new Date();
-                const dateString = today.toLocaleDateString();
-                const timeString = today.toLocaleTimeString();
+            const today = new Date();
+            const dateString = today.toLocaleDateString();
+            const timeString = today.toLocaleTimeString();
             
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                // Create receipt HTML
-                let receiptHTML = `
-                    <div class="text-center mb-4">
-                        <h2 class="text-xl font-bold">Payment Receipt</h2>
-                        <p class="text-sm text-gray-600">${dateString} ${timeString}</p>
-                    </div>
-                    <div class="border-t border-b py-3 my-3">
-                        <p><strong>Booking Reference:</strong> ${data.booking_reference}</p>
-                        <p><strong>Customer:</strong> ${data.customer_name || 'N/A'}</p>
-                    </div>
-                    <div class="my-3">
-                        <p><strong>Payment Method:</strong> Cash</p>
-                        <p><strong>Amount Paid:</strong> ₱${total.toFixed(2)}</p>
-                        <p><strong>Cash Received:</strong> ₱${cashReceived.toFixed(2)}</p>
-                        <p><strong>Change:</strong> ₱${change.toFixed(2)}</p>
-                    </div>
-                    <div class="border-t pt-3 text-center">
-                        <p class="text-sm">Thank you for your payment!</p>
-                    </div>
-                `;
+            // Create receipt HTML
+            let receiptHTML = `
+                <div class="text-center mb-4">
+                    <h2 class="text-xl font-bold">Payment Receipt</h2>
+                    <p class="text-sm text-gray-600">${dateString} ${timeString}</p>
+                </div>
+                <div class="border-t border-b py-3 my-3">
+                    <p><strong>Booking Reference:</strong> ${data.booking_reference}</p>
+                    <p><strong>Customer:</strong> ${data.customer_name || 'N/A'}</p>
+                </div>
+                <div class="my-3">
+                    <p><strong>Payment Method:</strong> Cash</p>
+                    <p><strong>Amount Paid:</strong> ₱${total.toFixed(2)}</p>
+                    <p><strong>Cash Received:</strong> ₱${cashReceived.toFixed(2)}</p>
+                    <p><strong>Change:</strong> ₱${change.toFixed(2)}</p>
+                </div>
+                <div class="border-t pt-3 text-center">
+                    <p class="text-sm">Thank you for your payment!</p>
+                </div>
+            `;
             
-
-
-
-
-                receiptContent.innerHTML = receiptHTML;
-                receiptModal.classList.remove('hidden');
+            receiptContent.innerHTML = receiptHTML;
+            receiptModal.classList.remove('hidden');
             }
           // Handle receipt modal close buttons
           closeReceiptBtns.forEach(btn => {

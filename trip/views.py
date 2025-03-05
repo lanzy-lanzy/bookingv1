@@ -1082,8 +1082,15 @@ def booking_details_html(request):
             booking.child_fare_total = child_fare * booking.child_passengers
             total_amount = booking.adult_fare_total + booking.child_fare_total
         else:  # vehicle booking
-            vehicle_fare = booking.vehicle_type.fare if booking.vehicle_type else Decimal('0')
-            total_amount = vehicle_fare
+            if booking.vehicle_type:
+                # Calculate vehicle fare including base fare and additional charges
+                base_fare = booking.vehicle_type.base_fare
+                # Add vehicle fare to booking object for template access
+                booking.vehicle_fare_total = base_fare
+                total_amount = base_fare
+            else:
+                booking.vehicle_fare_total = Decimal('0')
+                total_amount = Decimal('0')
             
         return render(request, 'dashboard/partials/booking_details.html', {
             'booking': booking,

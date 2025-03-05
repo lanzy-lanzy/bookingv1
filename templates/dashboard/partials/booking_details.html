@@ -158,9 +158,27 @@
                     {% endif %}
                     {% if booking.booking_type == 'vehicle' %}
                         <p class="flex justify-between">
+                            <span class="text-blue-100">Vehicle Type:</span>
+                            <span class="font-medium">{{ booking.vehicle_type.name }}</span>
+                        </p>
+                        <p class="flex justify-between">
                             <span class="text-blue-100">Vehicle Fare:</span>
                             <span class="font-medium">₱{{ booking.vehicle_fare_total }}</span>
                         </p>
+                        <p class="flex justify-between">
+                            <span class="text-blue-100">Plate Number:</span>
+                            <span class="font-medium">{{ booking.plate_number }}</span>
+                        </p>
+                        <p class="flex justify-between">
+                            <span class="text-blue-100">Occupants:</span>
+                            <span class="font-medium">{{ booking.occupant_count }}</span>
+                        </p>
+                        {% if booking.cargo_weight %}
+                        <p class="flex justify-between">
+                            <span class="text-blue-100">Cargo Weight:</span>
+                            <span class="font-medium">{{ booking.cargo_weight }} tons</span>
+                        </p>
+                        {% endif %}
                     {% endif %}
                     <div class="border-t border-blue-400 pt-3 mt-3">
                         <p class="flex justify-between text-xl">
