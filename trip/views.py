@@ -16,12 +16,13 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from decimal import Decimal
-from django.db.models import Sum, Count # Add this import
+from django.db.models import Sum, Avg # Add this import
 from datetime import timedelta
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_http_methods
 from utils.email import send_booking_confirmation_email
-# Login view
+  # Consolidated database imports# Add this import
+# Ln view
 def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -69,7 +70,66 @@ def logout_view(request):
     messages.success(request, "You have been successfully logged out.")
     return redirect('home')
 
+@login_required
+@staff_member_required
+def ratings_dashboard(request):
+    # Get filter parameters
+    status = request.GET.get('status', 'all')
+    rating_filter = request.GET.get('rating', 'all')
+    
+    # Base queryset
+    ratings = Rating.objects.select_related('vessel', 'user').order_by('-created_at')
+    
+    # Apply filters
+    if status == 'pending':
+        ratings = ratings.filter(is_approved=False)
+    elif status == 'approved':
+        ratings = ratings.filter(is_approved=True)
+        
+    if rating_filter != 'all':
+        ratings = ratings.filter(rating=int(rating_filter))
+    
+    # Calculate average rating
+    avg_rating = ratings.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(ratings, 10)  # 10 ratings per page
+    
+    try:
+        ratings = paginator.page(page)
+    except PageNotAnInteger:
+        ratings = paginator.page(1)
+    except EmptyPage:
+        ratings = paginator.page(paginator.num_pages)
+    
+    context = {
+        'ratings': ratings,
+        'avg_rating': round(avg_rating, 1),
+        'status': status,
+        'rating_filter': rating_filter,
+    }
+    
+    return render(request, 'dashboard/ratings.html', context)
 
+@login_required
+@staff_member_required
+def approve_rating(request, rating_id):
+    if request.method == 'POST':
+        rating = get_object_or_404(Rating, id=rating_id)
+        rating.is_approved = True
+        rating.save()
+        messages.success(request, 'Rating approved successfully.')
+    return redirect('ratings_dashboard')
+
+@login_required
+@staff_member_required
+def delete_rating(request, rating_id):
+    if request.method == 'POST':
+        rating = get_object_or_404(Rating, id=rating_id)
+        rating.delete()
+        messages.success(request, 'Rating deleted successfully.')
+    return redirect('ratings_dashboard')
 @login_required
 @staff_member_required
 @login_required
@@ -162,30 +222,32 @@ def dashboard_home(request):
     
     return render(request, 'dashboard/home.html', context)
 def home(request):
-    schedules = Schedule.objects.filter(status='scheduled').order_by('departure_datetime')[:3]
+    # Get only approved testimonials
+    testimonials = Rating.objects.filter(
+        is_approved=True  # Only get approved ratings
+    ).select_related(
+        'vessel', 
+        'user'
+    ).order_by('-created_at')[:6]  # Get latest 6 approved testimonials
     
-    # Get top testimonials for the home page
-    testimonials = Rating.objects.filter(rating__gte=4).order_by('-created_at')[:3]
+    # Calculate average rating from approved ratings only
+    avg_rating = Rating.objects.filter(
+        is_approved=True  # Only include approved ratings in average
+    ).aggregate(
+        avg=Avg('rating')
+    )['avg'] or 0
     
-    # Calculate average rating
-    avg_rating = Rating.objects.aggregate(avg=models.Avg('rating'))['avg'] or 0
-    avg_rating = round(avg_rating, 1)
+    # Get active vessels for the rating form
+    vessels = Vessel.objects.filter(active=True).order_by('name')
     
-    # Get total testimonials count
-    testimonials_count = Rating.objects.count()
-    
-    # Get popular routes
-    popular_routes = Route.objects.filter(active=True).annotate(
-        schedule_count=models.Count('schedule')
-    ).order_by('-schedule_count')[:3]
-    
-    return render(request, 'home.html', {
-        'schedules': schedules,
+    context = {
         'testimonials': testimonials,
-        'avg_rating': avg_rating,
-        'testimonials_count': testimonials_count,
-        'popular_routes': popular_routes
-    })
+        'avg_rating': round(avg_rating, 1),
+        'vessels': vessels,
+    }
+    
+    return render(request, 'home.html', context)
+
 def get_payment_details(request, booking_reference):
     booking = get_object_or_404(Booking, booking_reference=booking_reference)
     
@@ -730,54 +792,7 @@ def payment_list(request):
     
     return render(request, 'dashboard/payments.html', context)
 
-@login_required
-@staff_member_required
-def dashboard_ratings(request):
-    """
-    Display and manage ratings/testimonials in the admin dashboard
-    """
-    # Get all ratings ordered by creation date (newest first)
-    ratings = Rating.objects.all().order_by('-created_at')
-    
-    # Get filter parameters
-    min_rating = request.GET.get('min_rating', '')
-    vessel_id = request.GET.get('vessel', '')
-    
-    # Apply filters if provided
-    if min_rating and min_rating.isdigit():
-        ratings = ratings.filter(rating__gte=int(min_rating))
-    
-    if vessel_id and vessel_id.isdigit():
-        ratings = ratings.filter(vessel_id=int(vessel_id))
-    
-    # Calculate average rating
-    avg_rating = ratings.aggregate(avg=models.Avg('rating'))['avg'] or 0
-    avg_rating = round(avg_rating, 1)
-    
-    # Get rating distribution
-    rating_distribution = []
-    for i in range(1, 6):
-        count = ratings.filter(rating=i).count()
-        percentage = (count / ratings.count() * 100) if ratings.count() > 0 else 0
-        rating_distribution.append({
-            'stars': i,
-            'count': count,
-            'percentage': round(percentage, 1)
-        })
-    
-    # Get all vessels for the filter dropdown
-    vessels = Vessel.objects.filter(active=True).order_by('name')
-    
-    context = {
-        'ratings': ratings,
-        'avg_rating': avg_rating,
-        'rating_distribution': rating_distribution,
-        'vessels': vessels,
-        'min_rating': min_rating,
-        'selected_vessel': vessel_id
-    }
-    
-    return render(request, 'dashboard/ratings.html', context)
+
 
 @staff_member_required
 def add_rating(request):
@@ -1098,6 +1113,91 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from django.template.response import TemplateResponse
 from .models import Booking
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from .models import Rating, Vessel
+
+@login_required
+def submit_rating(request):
+    if request.method == 'POST':
+        try:
+            vessel_id = request.POST.get('vessel')
+            rating = request.POST.get('rating')
+            comment = request.POST.get('comment')
+            
+            # Create new rating (initially not approved)
+            new_rating = Rating.objects.create(
+                user=request.user,
+                vessel_id=vessel_id,
+                rating=rating,
+                comment=comment,
+                is_approved=False,  # Set to false by default
+                full_name=request.user.get_full_name() or request.user.username
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Thank you! Your review will be visible after approval.'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+            
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method'
+    })
+
+def ratings(request):
+    """
+    Public view for displaying and submitting ratings/testimonials
+    """
+    # Get all approved ratings ordered by creation date
+    ratings_list = Rating.objects.filter(is_approved=True).order_by('-created_at')
+    
+    # Calculate average rating
+    avg_rating = ratings_list.aggregate(avg=models.Avg('rating'))['avg'] or 0
+    avg_rating = round(avg_rating, 1)
+    
+    # Get rating distribution
+    rating_distribution = []
+    for i in range(1, 6):
+        count = ratings_list.filter(rating=i).count()
+        percentage = (count / ratings_list.count() * 100) if ratings_list.count() > 0 else 0
+        rating_distribution.append({
+            'stars': i,
+            'count': count,
+            'percentage': round(percentage, 1)
+        })
+    
+    # Get all active vessels for the rating form
+    vessels = Vessel.objects.filter(active=True).order_by('name')
+    
+    # Get user's existing ratings if authenticated
+    user_ratings = {}
+    if request.user.is_authenticated:
+        user_ratings = {
+            rating.vessel_id: rating 
+            for rating in Rating.objects.filter(user=request.user)
+        }
+    
+    context = {
+        'ratings': ratings_list,
+        'avg_rating': avg_rating,
+        'rating_distribution': rating_distribution,
+        'vessels': vessels,
+        'user_ratings': user_ratings
+    }
+    
+    return render(request, 'ratings.html', context)
+
+
 
 def booking_detail(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id)

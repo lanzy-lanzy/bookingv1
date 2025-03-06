@@ -30,7 +30,9 @@ urlpatterns = [
     path('dashboard/payments/', views.payment_list, name='payments'),
     path('dashboard/reports/', views.reports_view, name='reports'),
     path('dashboard/reports/export/', views.export_report, name='export_report'),
-    path('dashboard/ratings/', views.dashboard_ratings, name='dashboard_ratings'),
+    path('dashboard/ratings/', views.ratings_dashboard, name='ratings_dashboard'),
+    path('dashboard/ratings/approve/<int:rating_id>/', views.approve_rating, name='approve_rating'),
+    path('dashboard/ratings/delete/<int:rating_id>/', views.delete_rating, name='delete_rating'),
     path('dashboard/ratings/add/', views.add_rating, name='add_rating'),
     path('dashboard/routes/', views.route_list, name='route_list'),
     path('dashboard/routes/add/', views.add_route, name='add_route'),
@@ -96,5 +98,5 @@ urlpatterns = [
     path('dashboard/schedules/<int:pk>/delete/', views.schedule_delete, name='schedule_delete'),
    
     path('dashboard/schedules/<int:schedule_id>/get/', views.get_schedule, name='get_schedule'),
-
+    path('ratings/submit/', views.submit_rating, name='submit_rating'),
 ]

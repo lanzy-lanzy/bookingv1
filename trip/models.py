@@ -344,9 +344,14 @@ class Rating(models.Model):
     full_name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+    is_approved = models.BooleanField(default=False)  # Add this field for moderation
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)  # Add this field to track user ratings
+
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
-        return f"{self.full_name} - {self.rating} stars"
+        return f"{self.full_name}'s {self.rating}-star rating for {self.vessel.name}"
 
 # --------------------------------
 # 7. TEMPLATE-BASED NOTIFICATIONS
