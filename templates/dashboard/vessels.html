@@ -178,7 +178,7 @@
                 </div>
 
                 <!-- Passenger Capacity -->
-                <div class="space-y-2">
+                <div class="form-group relative group">
                     <label for="edit_capacity_passengers" class="block text-sm font-semibold text-gray-700">
                         Passenger Capacity
                         <span class="text-gray-500 text-xs">(Max: 1500)</span>
@@ -193,11 +193,15 @@
                                class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                placeholder="Enter passenger capacity">
                         <i class="fas fa-users absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <div class="tooltip opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-sm py-2 px-4 rounded-lg shadow-lg z-10 w-64 text-center">
+                            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900"></div>
+                            Passenger capacity cannot be modified once set
+                        </div>
                     </div>
                 </div>
 
                 <!-- Cargo Capacity -->
-                <div class="space-y-2">
+                <div class="form-group relative group">
                     <label for="edit_capacity_cargo" class="block text-sm font-semibold text-gray-700">
                         Cargo Capacity (tons)
                         <span class="text-gray-500 text-xs">(Max: 1500)</span>
@@ -213,6 +217,10 @@
                                class="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                placeholder="Enter cargo capacity">
                         <i class="fas fa-box absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <div class="tooltip opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-sm py-2 px-4 rounded-lg shadow-lg z-10 w-64 text-center">
+                            <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900"></div>
+                            Cargo capacity cannot be modified once set
+                        </div>
                     </div>
                 </div>
 
