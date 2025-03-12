@@ -11,7 +11,7 @@
               hx-target="#booking-list-container" 
               hx-trigger="submit, change from:#booking-type, change from:#payment-status"
               class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <!-- Search -->
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-700">Search</label>
@@ -33,6 +33,19 @@
                         <option value="passenger" {% if booking_type == 'passenger' %}selected{% endif %}>Passenger</option>
                         <option value="vehicle" {% if booking_type == 'vehicle' %}selected{% endif %}>Vehicle</option>
                         <option value="cargo" {% if booking_type == 'cargo' %}selected{% endif %}>Cargo</option>
+                    </select>
+                </div>
+
+                <!-- Vehicle Type Filter (New) -->
+                <div id="vehicle-type-filter" {% if booking_type != 'vehicle' %}style="display: none;"{% endif %}>
+                    <label for="vehicle-type" class="block text-sm font-medium text-gray-700">Vehicle Type</label>
+                    <select name="vehicle_type" 
+                            id="vehicle-type"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">All Vehicle Types</option>
+                        {% for type in vehicle_types %}
+                        <option value="{{ type.id }}" {% if vehicle_type == type.id %}selected{% endif %}>{{ type.name }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -162,6 +175,19 @@
         }, 500));
     }
 
+    // Show/hide vehicle type filter based on booking type selection
+    const bookingTypeSelect = document.getElementById('booking-type');
+    const vehicleTypeFilter = document.getElementById('vehicle-type-filter');
+
+    bookingTypeSelect.addEventListener('change', function() {
+        if (this.value === 'vehicle') {
+            vehicleTypeFilter.style.display = 'block';
+        } else {
+            vehicleTypeFilter.style.display = 'none';
+            document.getElementById('vehicle-type').value = '';
+        }
+    });
+
     // Reset filters function
     function resetFilters() {
         document.getElementById('search').value = '';
@@ -169,6 +195,8 @@
         document.getElementById('payment-status').value = '';
         document.getElementById('date-from').value = '';
         document.getElementById('date-to').value = '';
+        document.getElementById('vehicle-type').value = '';
+        vehicleTypeFilter.style.display = 'none';
         document.querySelector('form').dispatchEvent(new Event('submit'));
     }
 </script>

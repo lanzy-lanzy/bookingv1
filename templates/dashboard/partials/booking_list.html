@@ -30,7 +30,13 @@
                 </td>
                 <td class="px-6 py-4">{{ booking.booking_reference }}</td>
                 <td class="px-6 py-4">{{ booking.full_name }}</td>
-                <td class="px-6 py-4">{{ booking.get_booking_type_display }}</td>
+                <td class="px-6 py-4">
+                    {% if booking.booking_type == 'vehicle' %}
+                        {{ booking.get_booking_type_display }} - {{ booking.vehicle_type.name }}
+                    {% else %}
+                        {{ booking.get_booking_type_display }}
+                    {% endif %}
+                </td>
                 <td class="px-6 py-4">{{ booking.schedule }}</td>
                 <td class="px-6 py-4 font-medium">
                     {% if booking.booking_type == 'passenger' %}

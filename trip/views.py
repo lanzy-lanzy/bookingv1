@@ -77,7 +77,7 @@ def ratings_dashboard(request):
     status = request.GET.get('status', 'all')
     rating_filter = request.GET.get('rating', 'all')
     
-    # Base queryset
+    # Base queryset with related fields
     ratings = Rating.objects.select_related('vessel', 'user').order_by('-created_at')
     
     # Apply filters
@@ -1693,7 +1693,29 @@ def get_schedule(request, schedule_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+import logging
+
+logger = logging.getLogger(__name__)
+
+@staff_member_required
+def rating_details(request, rating_id):
+    logger.debug(f"Rating details requested for ID: {rating_id}")
+    logger.debug(f"Headers: {request.headers}")
     
+    rating = get_object_or_404(Rating.objects.select_related('vessel'), id=rating_id)
+    
+    if 'HX-Request' in request.headers:
+        logger.debug("HTMX request detected, rendering partial template")
+        return render(request, 'dashboard/partials/rating_details.html', {
+            'rating': rating
+        })
+    
+    logger.debug("Non-HTMX request detected")
+    return JsonResponse({'error': 'HTMX request required'}, status=400)
+
 
 
 def get_vessel_capacity(request, vessel_id):
@@ -2165,15 +2187,19 @@ def booking_list(request):
     # Get all bookings with related schedules and payments
     bookings = Booking.objects.select_related(
         'schedule__vessel', 
-        'schedule__route'
+        'schedule__route',
+        'vehicle_type'  # Add this line to include vehicle_type
     ).prefetch_related(
         'payment_set'
     ).order_by('-created_at')
     
     # Handle search and filtering
     search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
-    date_filter = request.GET.get('date', '')
+    booking_type = request.GET.get('booking_type', '')
+    payment_status = request.GET.get('payment_status', '')
+    vehicle_type = request.GET.get('vehicle_type', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
     
     if search_query:
         bookings = bookings.filter(
@@ -2183,15 +2209,20 @@ def booking_list(request):
             Q(email__icontains=search_query)
         )
     
-    if status_filter:
-        bookings = bookings.filter(status=status_filter)
-        
-    if date_filter:
-        try:
-            filter_date = timezone.datetime.strptime(date_filter, '%Y-%m-%d').date()
-            bookings = bookings.filter(created_at__date=filter_date)
-        except ValueError:
-            pass
+    if booking_type:
+        bookings = bookings.filter(booking_type=booking_type)
+
+    if payment_status:
+        bookings = bookings.filter(payment_status=payment_status)
+
+    if vehicle_type and booking_type == 'vehicle':
+        bookings = bookings.filter(vehicle_type_id=vehicle_type)
+
+    if date_from:
+        bookings = bookings.filter(created_at__date__gte=date_from)
+    
+    if date_to:
+        bookings = bookings.filter(created_at__date__lte=date_to)
     
     # Pagination
     paginator = Paginator(bookings, 20)  # Show 20 bookings per page
@@ -2207,16 +2238,38 @@ def booking_list(request):
     context = {
         'bookings': bookings,
         'search_query': search_query,
-        'status_filter': status_filter,
-        'date_filter': date_filter,
+        'booking_type': booking_type,
+        'payment_status': payment_status,
+        'vehicle_type': vehicle_type,
+        'date_from': date_from,
+        'date_to': date_to,
         'active_tab': 'bookings',
-        'status_choices': Booking.STATUS_CHOICES,
+        'vehicle_types': VehicleType.objects.all(),
     }
     
-
     return render(request, 'dashboard/bookings.html', context)
 
-
+def get_vessel_capacity(request, vessel_id):
+    """
+    API endpoint to get vessel capacity
+    """
+    try:
+        vessel = get_object_or_404(Vessel, id=vessel_id)
+        return JsonResponse({
+            'success': True,
+            'capacity_passengers': vessel.capacity_passengers,
+            'capacity_cargo': vessel.capacity_cargo
+        })
+    except Vessel.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Vessel not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 @login_required
 @staff_member_required

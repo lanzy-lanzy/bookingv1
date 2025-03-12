@@ -313,13 +313,62 @@
         window.openEditVesselModal = function(id, name, passengers, cargo, active) {
             document.getElementById('edit_vessel_id').value = id;
             document.getElementById('edit_vessel_name').value = name;
-            document.getElementById('edit_capacity_passengers').value = passengers;
-            document.getElementById('edit_capacity_cargo').value = cargo;
+            
+            // Get the passenger and cargo capacity inputs
+            const passengerInput = document.getElementById('edit_capacity_passengers');
+            const cargoInput = document.getElementById('edit_capacity_cargo');
+            
+            // Set values
+            passengerInput.value = passengers;
+            cargoInput.value = cargo;
+            
+            // If the vessel already has capacity values, make the inputs readonly
+            if (passengers > 0) {
+                passengerInput.setAttribute('readonly', true);
+                passengerInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+            } else {
+                passengerInput.removeAttribute('readonly');
+                passengerInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            }
+            
+            if (cargo > 0) {
+                cargoInput.setAttribute('readonly', true);
+                cargoInput.classList.add('bg-gray-100', 'cursor-not-allowed');
+            } else {
+                cargoInput.removeAttribute('readonly');
+                cargoInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+            }
+            
             document.getElementById('edit_active').checked = active === 'true';
             
             editForm.action = `/vessels/${id}/edit/`;
             editModal.classList.remove('hidden');
         };
+
+        // Add validation for new vessel form
+        const addForm_passengerInput = document.getElementById('capacity_passengers');
+        const addForm_cargoInput = document.getElementById('capacity_cargo');
+
+        // Function to check if capacity already exists
+        function checkExistingCapacity(input, capacityType) {
+            const value = parseFloat(input.value);
+            if (value > 0) {
+                input.setAttribute('readonly', true);
+                input.classList.add('bg-gray-100', 'cursor-not-allowed');
+                const helpText = document.createElement('p');
+                helpText.className = 'mt-1 text-sm text-gray-500';
+                helpText.textContent = `${capacityType} capacity cannot be modified once set`;
+                input.parentNode.appendChild(helpText);
+            }
+        }
+
+        // Check capacities when form loads
+        if (addForm_passengerInput) {
+            checkExistingCapacity(addForm_passengerInput, 'Passenger');
+        }
+        if (addForm_cargoInput) {
+            checkExistingCapacity(addForm_cargoInput, 'Cargo');
+        }
 
         // Delete Vessel Function
         window.deleteVessel = function(vesselId) {
@@ -336,66 +385,15 @@
                     if (data.success) {
                         window.location.reload();
                     } else {
-                        alert('Error: ' + data.error);
+                        alert('Error deleting vessel');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the vessel.');
+                    alert('Error deleting vessel');
                 });
             }
         };
-
-        // Form submission handlers
-        addForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while adding the vessel.');
-            });
-        });
-
-        editForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while updating the vessel.');
-            });
-        });
     });
 </script>
 {% endblock %}

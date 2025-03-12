@@ -132,95 +132,93 @@
 </div>
 
 <!-- Add/Edit Schedule Modal -->
-<div id="addScheduleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 transform transition-all">
+<div id="addScheduleModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 transform transition-all">
         <!-- Modal Header -->
-        <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-800 rounded-t-xl">
-            <h3 id="scheduleModalTitle" class="text-2xl font-bold text-white">Add New Schedule</h3>
-            <button id="closeAddScheduleModal" class="text-white hover:text-gray-200 transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-800 rounded-t-2xl">
+            <div class="flex justify-between items-center">
+                <h3 id="scheduleModalTitle" class="text-2xl font-bold text-white flex items-center">
+                    <i class="fas fa-calendar-plus mr-3"></i>
+                    <span>Add New Schedule</span>
+                </h3>
+                <button id="closeAddScheduleModal" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
         </div>
 
-        <form id="scheduleForm" method="post" class="p-6">
+        <!-- Modal Body -->
+        <form id="scheduleForm" method="POST" class="p-6 space-y-6">
             {% csrf_token %}
             <input type="hidden" id="schedule_id" name="schedule_id">
-            
+
+            <!-- Grid Layout for Form Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Vessel Selection -->
-                <div class="space-y-2">
-                    <label for="vessel" class="block text-sm font-semibold text-gray-700">Vessel</label>
-                    <select id="vessel" name="vessel" required 
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <div class="form-group">
+                    <label for="vessel" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-ship mr-2 text-blue-600"></i>Vessel
+                    </label>
+                    <select id="vessel" name="vessel" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Select a vessel</option>
                     </select>
                 </div>
 
                 <!-- Route Selection -->
-                <div class="space-y-2">
-                    <label for="route" class="block text-sm font-semibold text-gray-700">Route</label>
-                    <select id="route" name="route" required 
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <div class="form-group">
+                    <label for="route" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-route mr-2 text-blue-600"></i>Route
+                    </label>
+                    <select id="route" name="route" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Select a route</option>
                     </select>
                 </div>
 
-                <!-- DateTime Inputs -->
-                <div class="space-y-2">
-                    <label for="departure_datetime" class="block text-sm font-semibold text-gray-700">Departure Time</label>
-                    <input type="datetime-local" id="departure_datetime" name="departure_datetime" required 
-                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <!-- Departure DateTime -->
+                <div class="form-group">
+                    <label for="departure_datetime" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-plane-departure mr-2 text-blue-600"></i>Departure Time
+                    </label>
+                    <input type="datetime-local" id="departure_datetime" name="departure_datetime" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
-                <div class="space-y-2">
-                    <label for="arrival_datetime" class="block text-sm font-semibold text-gray-700">Arrival Time</label>
-                    <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required 
-                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <!-- Arrival DateTime -->
+                <div class="form-group">
+                    <label for="arrival_datetime" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-plane-arrival mr-2 text-blue-600"></i>Arrival Time
+                    </label>
+                    <input type="datetime-local" id="arrival_datetime" name="arrival_datetime" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
-                <!-- Capacity Inputs -->
-                <div class="space-y-2">
-                    <label for="available_seats" class="block text-sm font-semibold text-gray-700">Available Seats</label>
-                    <div class="relative">
-                        <input type="number" id="available_seats" name="available_seats" required 
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
-                        <i class="fas fa-users absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
+                <!-- Available Seats -->
+                <div class="form-group">
+                    <label for="available_seats" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-users mr-2 text-blue-600"></i>Available Seats
+                    </label>
+                    <input type="number" id="available_seats" name="available_seats" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
-                <div class="space-y-2">
-                    <label for="available_cargo_space" class="block text-sm font-semibold text-gray-700">Available Cargo Space (tons)</label>
-                    <div class="relative">
-                        <input type="number" id="available_cargo_space" name="available_cargo_space" required step="0.1"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
-                        <i class="fas fa-box absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
+                <!-- Available Cargo Space -->
+                <div class="form-group">
+                    <label for="available_cargo_space" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-box mr-2 text-blue-600"></i>Available Cargo Space (tons)
+                    </label>
+                    <input type="number" step="0.01" id="available_cargo_space" name="available_cargo_space" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
 
-                <!-- Fare Inputs -->
-                <div class="space-y-2">
-                    <label for="adult_fare" class="block text-sm font-semibold text-gray-700">Adult Fare</label>
-                    <div class="relative">
-                        <input type="number" id="adult_fare" name="adult_fare" required step="0.01"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
-                        <i class="fas fa-dollar-sign absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="child_fare" class="block text-sm font-semibold text-gray-700">Child Fare</label>
-                    <div class="relative">
-                        <input type="number" id="child_fare" name="child_fare" required step="0.01"
-                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pl-8">
-                        <i class="fas fa-dollar-sign absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </div>
-
-                <!-- Status Selection -->
-                <div class="space-y-2">
-                    <label for="status" class="block text-sm font-semibold text-gray-700">Status</label>
-                    <select id="status" name="status" required 
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <!-- Status -->
+                <div class="form-group">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-info-circle mr-2 text-blue-600"></i>Status
+                    </label>
+                    <select id="status" name="status" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="scheduled">Scheduled</option>
                         <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
@@ -228,28 +226,82 @@
                     </select>
                 </div>
 
-                <!-- Notes Textarea -->
-                <div class="col-span-2 space-y-2">
-                    <label for="notes" class="block text-sm font-semibold text-gray-700">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
-                              class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"></textarea>
+                <!-- Adult Fare -->
+                <div class="form-group">
+                    <label for="adult_fare" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-2 text-blue-600"></i>Adult Fare
+                    </label>
+                    <input type="number" step="0.01" id="adult_fare" name="adult_fare" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Child Fare -->
+                <div class="form-group">
+                    <label for="child_fare" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-child mr-2 text-blue-600"></i>Child Fare
+                    </label>
+                    <input type="number" step="0.01" id="child_fare" name="child_fare" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
 
+            <!-- Notes Textarea -->
+            <div class="form-group col-span-full">
+                <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-sticky-note mr-2 text-blue-600"></i>Notes
+                </label>
+                <textarea id="notes" name="notes" rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+
             <!-- Form Actions -->
-            <div class="mt-8 flex justify-end space-x-3">
-                <button type="button" id="cancelSchedule" 
-                        class="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all">
-                    Cancel
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button type="button" id="cancelSchedule"
+                        class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancel
                 </button>
-                <button type="submit" 
-                        class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                    <i class="fas fa-save mr-2"></i>
                     <span id="submitButtonText">Add Schedule</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Add this CSS to your existing styles -->
+<style>
+    .form-group {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .form-group:hover {
+        transform: translateY(-2px);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    #addScheduleModal {
+        animation: modalFade 0.3s ease-out;
+    }
+
+    @keyframes modalFade {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 
 <!-- Delete Schedule Modal -->
 <div id="deleteScheduleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
@@ -545,7 +597,14 @@
                     document.getElementById('child_fare').value = scheduleData.schedule.child_fare;
                     document.getElementById('status').value = scheduleData.schedule.status;
                     document.getElementById('notes').value = scheduleData.schedule.notes || '';
-                    
+                    // Make capacity fields read-only when editing
+                    document.getElementById('available_seats').readOnly = true;
+                    document.getElementById('available_cargo_space').readOnly = true;
+
+                    // Add visual indication that fields are read-only
+                    document.getElementById('available_seats').classList.add('bg-gray-100');
+                    document.getElementById('available_cargo_space').classList.add('bg-gray-100');
+
                     // Show modal
                     addModal.classList.remove('hidden');
                 } else {
