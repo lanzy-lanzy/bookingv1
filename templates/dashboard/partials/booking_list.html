@@ -19,8 +19,8 @@
             <tr>
                 <td class="px-6 py-4">
                     {% if booking.booking_reference %}
-                        <img src="{% url 'generate_qr_code' booking.booking_reference %}" 
-                             alt="Booking QR Code" 
+                        <img src="{% url 'generate_qr_code' booking.booking_reference %}"
+                             alt="Booking QR Code"
                              class="w-16 h-16">
                     {% else %}
                         <div class="w-16 h-16 flex items-center justify-center bg-gray-100 rounded">
@@ -59,19 +59,30 @@
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 space-x-2">
-                    {% if not booking.is_paid %}
-                    <!-- Payment Button -->
-                    <a href="{% url 'payments' %}" 
-                       class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200">
-                        <i class="fas fa-money-bill-wave mr-2"></i>
-                        Process Payment
-                    </a>
-                    {% else %}
-                    <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-md">
-                        <i class="fas fa-check-circle mr-2"></i>
-                        Already Paid
-                    </span>
-                    {% endif %}
+                    <div class="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
+                        <!-- View Details Button -->
+                        <button class="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 transition-colors duration-200"
+                                hx-get="{% url 'booking_detail' booking_id=booking.id %}"
+                                hx-target="#modal-content"
+                                onclick="showModal()">
+                            <i class="fas fa-eye mr-2"></i>
+                            View Details
+                        </button>
+
+                        {% if not booking.is_paid %}
+                        <!-- Payment Button -->
+                        <a href="{% url 'payments' %}"
+                           class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200">
+                            <i class="fas fa-money-bill-wave mr-2"></i>
+                            Process Payment
+                        </a>
+                        {% else %}
+                        <span class="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-600 text-sm font-medium rounded-md">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Paid
+                        </span>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% empty %}
@@ -84,15 +95,26 @@
 </div>
 
 <!-- Modal for View Details -->
-<div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full"
-     _="on click if event.target.id == 'modal' remove .show from me">
+<div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
     <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
-        <div id="modal-content">
+        <!-- Close button in the top-right corner -->
+        <button type="button"
+                class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                onclick="hideModal()">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+
+        <div id="modal-content" class="max-h-[70vh] overflow-y-auto">
             <!-- Content will be loaded here -->
+            <div class="flex justify-center items-center p-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
         </div>
         <div class="mt-4 flex justify-end">
             <button class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                    _="on click remove .show from #modal">
+                    onclick="hideModal()">
                 Close
             </button>
         </div>
@@ -111,7 +133,7 @@
     <div class="flex justify-center">
         <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
             {% if bookings.has_previous %}
-            <a href="?page={{ bookings.previous_page_number }}" 
+            <a href="?page={{ bookings.previous_page_number }}"
                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                hx-get="{% url 'booking_list' %}?page={{ bookings.previous_page_number }}&search={{ search_query }}&booking_type={{ booking_type }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}"
                hx-target="#booking-list-container">
@@ -126,7 +148,7 @@
                     {{ i }}
                 </span>
                 {% else %}
-                <a href="?page={{ i }}" 
+                <a href="?page={{ i }}"
                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                    hx-get="{% url 'booking_list' %}?page={{ i }}&search={{ search_query }}&booking_type={{ booking_type }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}"
                    hx-target="#booking-list-container">
@@ -136,7 +158,7 @@
             {% endfor %}
 
             {% if bookings.has_next %}
-            <a href="?page={{ bookings.next_page_number }}" 
+            <a href="?page={{ bookings.next_page_number }}"
                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                hx-get="{% url 'booking_list' %}?page={{ bookings.next_page_number }}&search={{ search_query }}&booking_type={{ booking_type }}&payment_status={{ payment_status }}&date_from={{ date_from }}&date_to={{ date_to }}"
                hx-target="#booking-list-container">
@@ -149,32 +171,50 @@
     {% endif %}
 </div>
 
-<!-- Add this to your extra_js block or at the bottom of the file -->
+<!-- Modal and HTMX handling scripts -->
 <script>
-    function openModal() {
-        document.getElementById('modal').classList.remove('hidden');
+    // Simple function to show modal
+    function showModal() {
+        document.getElementById('modal').classList.add('show');
     }
 
-    function closeModal() {
-        document.getElementById('modal').classList.add('hidden');
+    // Simple function to hide modal
+    function hideModal() {
+        document.getElementById('modal').classList.remove('show');
     }
 
-    // Close modal when clicking outside
+    // Close modal when clicking on the background (outside the modal content)
     document.getElementById('modal').addEventListener('click', function(e) {
         if (e.target === this) {
-            closeModal();
+            hideModal();
         }
     });
 
-    // Handle successful form submission
+    // Handle HTMX events
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (evt.detail.target.id === 'modal-content') {
+            // Show loading spinner before content loads
+            evt.detail.target.innerHTML = '<div class="flex justify-center items-center p-12"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>';
+        }
+    });
+
     document.body.addEventListener('htmx:afterSwap', function(evt) {
-        if (evt.detail.target.id === 'modal-content' && evt.detail.xhr.status === 200) {
-            // Check if the response indicates success (you might need to adjust this condition)
-            if (evt.detail.xhr.responseText.includes('success')) {
-                closeModal();
-                // Refresh the booking list
-                htmx.trigger('#booking-list-container', 'refresh');
+        if (evt.detail.target.id === 'modal-content') {
+            // Content loaded successfully
+            if (evt.detail.xhr.status === 200) {
+                // Make sure modal is visible
+                showModal();
+            } else {
+                // Handle error
+                evt.detail.target.innerHTML = '<div class="p-6 text-center text-red-500"><i class="fas fa-exclamation-circle text-3xl mb-4"></i><p>Error loading booking details</p></div>';
             }
+        }
+    });
+
+    // Handle ESC key to close modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('modal').classList.contains('show')) {
+            hideModal();
         }
     });
 </script>

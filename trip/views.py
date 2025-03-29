@@ -1835,8 +1835,24 @@ from django.views.decorators.http import require_http_methods
 
 def booking_detail(request, booking_id):
     booking = get_object_or_404(Booking, id=booking_id)
+
+    # Calculate total amount based on booking type
+    if booking.booking_type == 'passenger':
+        adult_total = booking.adult_passengers * booking.schedule.adult_fare
+        child_total = booking.child_passengers * booking.schedule.child_fare
+        total_amount = adult_total + child_total
+
+        # Store these values for display in the template
+        booking.adult_fare_total = adult_total
+        booking.child_fare_total = child_total
+    elif booking.booking_type == 'vehicle' and booking.vehicle_type:
+        total_amount = booking.vehicle_type.base_fare
+    else:
+        total_amount = 0
+
     return TemplateResponse(request, 'dashboard/partials/booking_details.html', {
-        'booking': booking
+        'booking': booking,
+        'total_amount': total_amount
     })
 
 def booking_delete(request, booking_id):

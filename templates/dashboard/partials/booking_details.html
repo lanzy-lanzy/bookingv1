@@ -9,7 +9,7 @@
                 {% else %}
                     bg-yellow-100 text-yellow-800 border border-yellow-200
                 {% endif %}">
-                <span class="w-2 h-2 mr-2 rounded-full 
+                <span class="w-2 h-2 mr-2 rounded-full
                     {% if booking.is_paid %}bg-green-400{% else %}bg-yellow-400{% endif %}"></span>
                 {{ booking.is_paid|yesno:"Paid,Pending" }}
             </span>
@@ -84,7 +84,7 @@
                         <i class="fas fa-hashtag text-gray-400 w-5 mr-2"></i>
                         <span class="text-gray-600 font-mono">{{ booking.booking_reference }}</span>
                     </div>
-                    
+
                     {% if booking.booking_type == 'passenger' %}
                         <div class="flex items-center">
                             <i class="fas fa-user-friends text-gray-400 w-5 mr-2"></i>
@@ -94,6 +94,26 @@
                             <i class="fas fa-child text-gray-400 w-5 mr-2"></i>
                             <span class="text-gray-600">{{ booking.child_passengers }} Child(ren)</span>
                         </div>
+
+                        <!-- Passenger Names Section -->
+                        {% if booking.passengers.all %}
+                        <div class="col-span-2 mt-4">
+                            <h4 class="text-md font-semibold text-gray-700 mb-2">Passenger Names</h4>
+                            <div class="bg-blue-50 rounded-lg p-3">
+                                <ul class="divide-y divide-blue-100">
+                                    {% for passenger in booking.passengers.all %}
+                                    <li class="py-2 flex items-center">
+                                        <i class="{% if passenger.passenger_type == 'adult' %}fas fa-user{% else %}fas fa-child{% endif %} text-blue-500 w-5 mr-2"></i>
+                                        <span class="text-gray-700">{{ passenger.full_name }}</span>
+                                        <span class="ml-auto text-xs px-2 py-1 rounded-full {% if passenger.passenger_type == 'adult' %}bg-blue-100 text-blue-700{% else %}bg-purple-100 text-purple-700{% endif %}">
+                                            {{ passenger.get_passenger_type_display }}
+                                        </span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% if booking.schedule.adult_fare %}
                             <div class="flex items-center">
                                 <i class="fas fa-money-bill text-gray-400 w-5 mr-2"></i>
@@ -107,7 +127,7 @@
                             </div>
                         {% endif %}
                     {% endif %}
-                    
+
                     {% if booking.booking_type == 'vehicle' %}
                         <div class="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="flex items-center">
@@ -188,89 +208,47 @@
                     </div>
                 </div>
             </div>
-              <!-- Payment Form - Add a condition to hide for paid bookings -->
-              {% if booking.is_paid %}
-                  <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
-                      <div class="flex items-center justify-center">
-                          <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
-                          <p class="text-gray-700 font-medium">This transaction has already been processed.</p>
+              <!-- Payment Status Information -->
+              <div class="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-6">
+                  <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                          {% if booking.is_paid %}
+                          <div class="bg-green-100 p-3 rounded-full mr-4">
+                              <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                          </div>
+                          <div>
+                              <h4 class="font-semibold text-gray-800">Payment Completed</h4>
+                              <p class="text-sm text-gray-600">This booking has been paid</p>
+                          </div>
+                          {% else %}
+                          <div class="bg-yellow-100 p-3 rounded-full mr-4">
+                              <i class="fas fa-clock text-yellow-500 text-xl"></i>
+                          </div>
+                          <div>
+                              <h4 class="font-semibold text-gray-800">Payment Pending</h4>
+                              <p class="text-sm text-gray-600">This booking has not been paid yet</p>
+                          </div>
+                          {% endif %}
                       </div>
-        
-                      <div class="mt-4">
-                          <button type="button" 
-                                  onclick="printReceipt()"
-                                  class="w-full bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 
-                           transition duration-150 ease-in-out flex items-center justify-center">
+
+                      <!-- Action Buttons -->
+                      <div>
+                          {% if booking.is_paid %}
+                          <a href="{% url 'print_ticket' booking.booking_reference %}" target="_blank"
+                             class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                               <i class="fas fa-print mr-2"></i>
-                              Print Receipt
-                          </button>
+                              Print Ticket
+                          </a>
+                          {% else %}
+                          <a href="{% url 'payments' %}"
+                             class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                              <i class="fas fa-money-bill-wave mr-2"></i>
+                              Process Payment
+                          </a>
+                          {% endif %}
                       </div>
                   </div>
-              {% else %}
-                  <!-- Original payment form - only show for unpaid bookings -->
-                  <form hx-post="{% url 'process_payment_htmx' %}"
-                        hx-target="#payment-actions-container"
-                        hx-swap="outerHTML"
-                        class="mt-6"
-                        id="payment-form">
-                      {% csrf_token %}
-                      <input type="hidden" name="booking_reference" value="{{ booking.booking_reference }}">
-                      <!-- Make sure we're using the correct total amount -->
-                      <input type="hidden" name="total_amount" value="{{ total_amount }}" data-total-amount="{{ total_amount }}">
-        
-                      <div class="bg-gray-50 rounded-xl p-6 space-y-6">
-                          <!-- Amount Received -->
-                          <div id="cash-amount-field">
-                              <label class="block text-sm font-medium text-gray-700 mb-2">Amount Received</label>
-                              <div class="relative">
-                                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">₱</span>
-                                  <input type="number" 
-                           name="amount_received" 
-                           id="amount-received"
-                           step="0.01" 
-                           min="{{ total_amount }}"
-                           class="w-full pl-8 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                           placeholder="Enter amount received"
-                           oninput="calculateChange(this.value, {{ total_amount }})">
-                              </div>
-                              <p class="text-sm text-gray-500 mt-2">
-                                  <i class="fas fa-info-circle mr-1"></i>
-                                  Minimum amount: ₱{{ total_amount }}
-                              </p>
-                
-                              <!-- Change Display -->
-                              <div id="change-display" class="hidden mt-4 bg-green-50 rounded-lg p-4 border border-green-200">
-                                  <div class="flex justify-between items-center">
-                                      <div>
-                                          <p class="text-sm font-medium text-green-800">Change Due</p>
-                                          <p class="text-2xl font-bold text-green-600" id="change-amount">₱0.00</p>
-                                      </div>
-                                      <div class="bg-green-100 p-3 rounded-full">
-                                          <i class="fas fa-exchange-alt text-green-500 text-xl"></i>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                          <!-- Submit Button -->
-                             <button type="submit" 
-                                     class="w-full bg-green-600 text-white py-4 px-6 rounded-xl hover:bg-green-700 
-                              transition duration-150 ease-in-out flex items-center justify-center relative"
-                                     hx-post="{% url 'process_payment_htmx' %}"
-                                     hx-target="body"
-                                     hx-swap="outerHTML"
-                                     hx-redirect="{% url 'print_ticket' booking.booking_reference %}"
-                                     hx-indicator="#spinner">
-                                 <span class="htmx-indicator-hide">
-                                     <i class="fas fa-check-circle mr-2"></i>
-                                     <span>Confirm Payment</span>
-                                 </span>
-                                 <span id="spinner" class="htmx-indicator">
-                                     <i class="fas fa-spinner fa-spin"></i>
-                                 </span>
-                             </button>                     
-                         </div>
-                  </form>
-              {% endif %}
+              </div>
     </div>
 {% else %}
     <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
@@ -281,62 +259,8 @@
     </div>
 {% endif %}
 <!-- Add this script at the end of your booking_details.html file -->
-<script>
-    function calculateChange(amountReceived, totalAmount) {
-        const received = parseFloat(amountReceived) || 0;
-        const total = parseFloat(totalAmount) || 0;
-        const change = received - total;
-        
-        // Get the change display and amount elements
-        const changeDisplay = document.getElementById('change-display');
-        const changeAmountElement = document.getElementById('change-amount');
-        
-        if (received >= total) {
-            // Show the change section and update the amount
-            changeDisplay.classList.remove('hidden');
-            changeAmountElement.textContent = `₱${change.toFixed(2)}`;
-            
-            // Add a hidden input to store the change value for form submission
-            const changeInput = document.getElementById('change-input') || document.createElement('input');
-            changeInput.type = 'hidden';
-            changeInput.id = 'change-input';
-            changeInput.name = 'change_amount';
-            changeInput.value = change.toFixed(2);
-            
-            // Add to form if it doesn't exist
-            const form = document.getElementById('payment-form');
-            if (!document.getElementById('change-input') && form) {
-                form.appendChild(changeInput);
-            }
-        } else {
-            // Hide the change section if amount received is less than total
-            changeDisplay.classList.add('hidden');
-        }
-    }
-    
-    // Initialize the function when the document loads
-    document.addEventListener('DOMContentLoaded', function() {
-        const amountReceivedInput = document.getElementById('amount-received');
-        if (amountReceivedInput) {
-            amountReceivedInput.addEventListener('input', function() {
-                const totalAmount = this.getAttribute('min');
-                calculateChange(this.value, totalAmount);
-            });
-        }
-    });
-</script>
-<!-- Add this after the Submit Button in the Payment Form section -->
-{% if booking.is_paid %}
-<div class="mt-4">
-    <button type="button" 
-            onclick="printReceipt()"
-            class="w-full bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 
-                   transition duration-150 ease-in-out flex items-center justify-center">
-        <i class="fas fa-print mr-2"></i>
-        Print Receipt
-    </button>
-</div>
-{% endif %}
+
+
 
 <!-- Add this script at the end of your booking_details.html file (after the calculateChange script) -->
 <script>
@@ -350,7 +274,7 @@
         const changeAmount = change >= 0 ? change.toFixed(2) : "0.00";
         const paymentDate = new Date().toLocaleDateString();
         const paymentTime = new Date().toLocaleTimeString();
-        
+
         // Create receipt HTML content
         const receiptContent = `
             <html>
@@ -400,9 +324,9 @@
                         <h2 style="margin: 0;">Payment Receipt</h2>
                         <p>${paymentDate} ${paymentTime}</p>
                     </div>
-                    
+
                     <div class="divider"></div>
-                    
+
                     <div class="info-row">
                         <span>Booking Reference:</span>
                         <span>${bookingReference}</span>
@@ -411,9 +335,9 @@
                         <span>Customer:</span>
                         <span>${customerName}</span>
                     </div>
-                    
+
                     <div class="divider"></div>
-                    
+
                     {% if booking.booking_type == 'passenger' %}
                     <div class="info-row">
                         <span>Adult Passengers:</span>
@@ -432,7 +356,7 @@
                         <span>₱${"{{ booking.child_fare_rate }}"}</span>
                     </div>
                     {% endif %}
-                    
+
                     {% if booking.booking_type == 'vehicle' %}
                     <div class="info-row">
                         <span>Vehicle Type:</span>
@@ -447,9 +371,9 @@
                         <span>${"{{ booking.occupant_count }}"}</span>
                     </div>
                     {% endif %}
-                    
+
                     <div class="divider"></div>
-                    
+
                     <div class="info-row total">
                         <span>Total Amount:</span>
                         <span>₱${totalAmount}</span>
@@ -462,9 +386,9 @@
                         <span>Change:</span>
                         <span>₱${changeAmount}</span>
                     </div>
-                    
+
                     <div class="divider"></div>
-                    
+
                     <div class="footer">
                         <p>Thank you for your payment!</p>
                         <p>For any inquiries, please contact customer service.</p>
@@ -473,7 +397,7 @@
             </body>
             </html>
         `;
-        
+
         // Open a new window and print the receipt
         const printWindow = window.open('', '_blank');
         printWindow.document.write(receiptContent);
