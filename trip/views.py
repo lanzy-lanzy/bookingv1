@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.db import models
 from django.http import JsonResponse, HttpResponse
-from .models import Booking, Vessel, Schedule, Payment, VehicleType, Rating, Route, ContactMessage, TravelGuideline
+from .models import Booking, Vessel, Schedule, Payment, VehicleType, Rating, Route, ContactMessage, TravelGuideline, Passenger
 from django.urls import reverse
 from .forms import BookingForm, RouteForm, UserRegistrationForm
 from django.shortcuts import render
@@ -33,7 +33,7 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f"Welcome back, {username}!")
-                
+
                 # Redirect based on user role
                 if user.is_staff:
                     return redirect('dashboard')  # Admin/staff go to dashboard
@@ -76,40 +76,40 @@ def ratings_dashboard(request):
     # Get filter parameters
     status = request.GET.get('status', 'all')
     rating_filter = request.GET.get('rating', 'all')
-    
+
     # Base queryset with related fields
     ratings = Rating.objects.select_related('vessel', 'user').order_by('-created_at')
-    
+
     # Apply filters
     if status == 'pending':
         ratings = ratings.filter(is_approved=False)
     elif status == 'approved':
         ratings = ratings.filter(is_approved=True)
-        
+
     if rating_filter != 'all':
         ratings = ratings.filter(rating=int(rating_filter))
-    
+
     # Calculate average rating
     avg_rating = ratings.aggregate(avg=Avg('rating'))['avg'] or 0
-    
+
     # Pagination
     page = request.GET.get('page', 1)
     paginator = Paginator(ratings, 10)  # 10 ratings per page
-    
+
     try:
         ratings = paginator.page(page)
     except PageNotAnInteger:
         ratings = paginator.page(1)
     except EmptyPage:
         ratings = paginator.page(paginator.num_pages)
-    
+
     context = {
         'ratings': ratings,
         'avg_rating': round(avg_rating, 1),
         'status': status,
         'rating_filter': rating_filter,
     }
-    
+
     return render(request, 'dashboard/ratings.html', context)
 
 @login_required
@@ -172,7 +172,7 @@ def dashboard_home(request):
 
     # Get upcoming schedules with all related data needed for the template
     upcoming_schedules = Schedule.objects.select_related(
-        'vessel', 
+        'vessel',
         'route'
     ).filter(
         departure_datetime__gte=timezone.now(),
@@ -219,38 +219,38 @@ def dashboard_home(request):
         # Quick actions section
         'vehicle_types': VehicleType.objects.all(),
     }
-    
+
     return render(request, 'dashboard/home.html', context)
 def home(request):
     # Get only approved testimonials
     testimonials = Rating.objects.filter(
         is_approved=True  # Only get approved ratings
     ).select_related(
-        'vessel', 
+        'vessel',
         'user'
     ).order_by('-created_at')[:6]  # Get latest 6 approved testimonials
-    
+
     # Calculate average rating from approved ratings only
     avg_rating = Rating.objects.filter(
         is_approved=True  # Only include approved ratings in average
     ).aggregate(
         avg=Avg('rating')
     )['avg'] or 0
-    
+
     # Get active vessels for the rating form
     vessels = Vessel.objects.filter(active=True).order_by('name')
-    
+
     context = {
         'testimonials': testimonials,
         'avg_rating': round(avg_rating, 1),
         'vessels': vessels,
     }
-    
+
     return render(request, 'home.html', context)
 
 def get_payment_details(request, booking_reference):
     booking = get_object_or_404(Booking, booking_reference=booking_reference)
-    
+
     # Calculate payment amount
     if booking.booking_type == 'passenger':
         adult_passengers = int(booking.adult_passengers or 0)
@@ -258,7 +258,7 @@ def get_payment_details(request, booking_reference):
         adult_fare = booking.adult_fare_rate or Decimal('0.00')
         child_fare = booking.child_fare_rate or Decimal('0.00')
         payment_amount = (adult_passengers * adult_fare) + (child_passengers * child_fare)
-    
+
     return HttpResponse(f'₱{payment_amount}')
 
 def booking(request):
@@ -268,10 +268,10 @@ def booking(request):
         departure_datetime__gt=timezone.now(),
         status='scheduled'
     ).order_by('departure_datetime')
-    
+
     # Get all vehicle types for the vehicle booking form
     vehicle_types = VehicleType.objects.all()
-    
+
     # Check if a specific schedule was selected
     selected_schedule = None
     if request.GET.get('schedule'):
@@ -283,13 +283,13 @@ def booking(request):
         except Schedule.DoesNotExist:
             messages.error(request, "The selected schedule does not exist.")
             return redirect('booking')
-    
+
     context = {
         'schedules': schedules,
         'vehicle_types': vehicle_types,
         'selected_schedule': selected_schedule,
     }
-    
+
     return render(request, 'booking.html', context)
 
 
@@ -297,11 +297,11 @@ def guidelines_view(request):
     """View for displaying travel guidelines"""
     # Get all guidelines ordered by effective date (newest first)
     guidelines = TravelGuideline.objects.all().order_by('-effective_date')
-    
+
     context = {
         'guidelines': guidelines,
     }
-    
+
     return render(request, 'guidelines.html', context)
 def get_schedule(request, pk):
     """
@@ -309,7 +309,7 @@ def get_schedule(request, pk):
     """
     try:
         schedule = get_object_or_404(Schedule, pk=pk)
-        
+
         # Format the data for the response
         schedule_data = {
             'id': schedule.id,
@@ -334,7 +334,7 @@ def get_schedule(request, pk):
             'status': schedule.status,
             'notes': schedule.notes if hasattr(schedule, 'notes') else ''
         }
-        
+
         return JsonResponse({'success': True, 'schedule': schedule_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -345,7 +345,7 @@ def get_vessel_capacity(request, vessel_id):
     """
     try:
         vessel = get_object_or_404(Vessel, id=vessel_id)
-        
+
         # Return vessel capacity data
         capacity_data = {
             'id': vessel.id,
@@ -353,7 +353,7 @@ def get_vessel_capacity(request, vessel_id):
             'capacity_passengers': vessel.capacity_passengers,
             'capacity_cargo': vessel.capacity_cargo
         }
-        
+
         return JsonResponse({'success': True, 'capacity': capacity_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -366,7 +366,7 @@ def mark_payment_complete(request, booking_reference):
         try:
             booking = get_object_or_404(Booking, booking_reference=booking_reference)
             payment_method = request.POST.get('payment_method', 'online')
-            
+
             # Calculate payment amount based on booking type
             payment_amount = 0
             if booking.booking_type == 'passenger':
@@ -376,25 +376,25 @@ def mark_payment_complete(request, booking_reference):
                 # Base price for vehicle + additional for passengers
                 base_price = booking.vehicle_type.price if booking.vehicle_type else 100
                 payment_amount = base_price + (20 * booking.occupant_count)
-            
+
             # Create payment record
             payment = Payment.objects.create(
                 booking=booking,
                 amount_paid=payment_amount,
                 payment_method=payment_method
             )
-            
+
             # Update booking status
             booking.is_paid = True
             booking.save()
-            
+
             messages.success(request, "Payment successful! Your booking is confirmed.")
             return redirect('booking_confirmation', booking_reference=booking.booking_reference)
-            
+
         except Booking.DoesNotExist:
             messages.error(request, "Invalid booking reference.")
             return redirect('home')
-    
+
     # If not POST, redirect to payment page
     return redirect('payment_view')
 import qrcode
@@ -413,7 +413,7 @@ def get_booking_details(request, booking_reference):
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
         total_amount = calculate_booking_payment(booking)
-        
+
         booking_data = {
             'success': True,
             'booking_type': booking.get_booking_type_display(),
@@ -426,7 +426,7 @@ def get_booking_details(request, booking_reference):
             'is_paid': booking.is_paid,
             'created_at': booking.created_at.strftime('%B %d, %Y %I:%M %p'),
         }
-        
+
         if booking.booking_type == 'passenger':
             booking_data.update({
                 'number_of_passengers': booking.number_of_passengers,
@@ -439,7 +439,7 @@ def get_booking_details(request, booking_reference):
                 'occupant_count': booking.occupant_count,
                 'cargo_weight': float(booking.cargo_weight or 0)
             })
-        
+
         return JsonResponse(booking_data)
     except Booking.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Booking not found'}, status=404)
@@ -450,12 +450,12 @@ def generate_qr_code(request, booking_reference):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(booking_reference)  # Just the reference, no extra formatting
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = BytesIO()
     img.save(buffer, format='PNG')
     buffer.seek(0)
-    
+
     return HttpResponse(buffer, content_type='image/png')
 
 
@@ -477,20 +477,20 @@ logger = logging.getLogger(__name__)
 def process_payment_htmx(request):
     booking_reference = request.POST.get('booking_reference')
     logger.info(f"Processing payment for booking: {booking_reference}")
-    
+
     try:
         total_amount = Decimal(request.POST.get('total_amount', '0'))
         amount_received = Decimal(request.POST.get('amount_received', '0'))
-        
+
         logger.debug(f"Payment details - Total: ₱{total_amount}, Received: ₱{amount_received}")
-        
+
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
         logger.debug(f"Found booking - Customer: {booking.full_name}, Contact: {booking.contact_number}")
-        
+
         if amount_received < total_amount:
             logger.warning(f"Insufficient payment - Expected: ₱{total_amount}, Received: ₱{amount_received}")
             return HttpResponseBadRequest("Amount received is less than total amount")
-        
+
         # Create payment record
         payment = Payment.objects.create(
             booking=booking,
@@ -502,13 +502,13 @@ def process_payment_htmx(request):
             payment_reference=f"PAY-{timezone.now().strftime('%Y%m%d')}-{booking_reference[-6:]}"
         )
         logger.info(f"Payment record created - Reference: {payment.payment_reference}")
-        
+
         # Update booking status
         booking.is_paid = True
         booking.payment = payment
         booking.save()
         logger.info("Booking marked as paid")
-        
+
         # Send confirmation email after payment is recorded
         try:
             email_sent = send_booking_confirmation_email(booking)
@@ -519,9 +519,9 @@ def process_payment_htmx(request):
         except Exception as email_error:
             logger.error(f"Email sending error: {str(email_error)}", exc_info=True)
             # Continue processing even if email fails
-        
+
         return HttpResponseRedirect(reverse('print_ticket', args=[booking_reference]))
-        
+
     except Exception as e:
         logger.error(f"Payment processing error: {str(e)}", exc_info=True)
         return HttpResponseBadRequest(f"Error processing payment: {str(e)}")
@@ -550,10 +550,10 @@ def booking(request):
         departure_datetime__gt=timezone.now(),
         status='scheduled'
     ).order_by('departure_datetime')
-    
+
     # Get all vehicle types for the vehicle booking form
     vehicle_types = VehicleType.objects.all()
-    
+
     # Check if a specific schedule was selected
     selected_schedule = None
     if request.GET.get('schedule'):
@@ -565,13 +565,13 @@ def booking(request):
         except Schedule.DoesNotExist:
             messages.error(request, "The selected schedule does not exist.")
             return redirect('booking')
-    
+
     context = {
         'schedules': schedules,
         'vehicle_types': vehicle_types,
         'selected_schedule': selected_schedule,
     }
-    
+
     return render(request, 'booking.html', context)
 
 def schedules_view(request):
@@ -581,28 +581,28 @@ def schedules_view(request):
         departure_datetime__gt=timezone.now(),
         status='scheduled'
     ).order_by('departure_datetime')
-    
+
     # Get filter parameters
     route = request.GET.get('route', '')
     date = request.GET.get('date', '')
-    
+
     # Apply filters if provided
     if route:
         schedules = schedules.filter(route__name__icontains=route)
-    
+
     if date:
         try:
             search_date = timezone.datetime.strptime(date, '%Y-%m-%d').date()
             schedules = schedules.filter(departure_datetime__date=search_date)
         except ValueError:
             pass
-    
+
     context = {
         'schedules': schedules,
         'selected_route': route,
         'selected_date': date,
     }
-    
+
     return render(request, 'schedules.html', context)
 from django.http import JsonResponse
 from .models import Vessel
@@ -652,12 +652,12 @@ def calculate_fare(request):
         schedule_id = request.GET.get('schedule')
         adult_count = int(request.GET.get('adult_passengers', 0))
         child_count = int(request.GET.get('child_passengers', 0))
-        
+
         schedule = Schedule.objects.get(id=schedule_id)
         adult_total = schedule.adult_fare * adult_count
         child_total = schedule.child_fare * child_count
         total = adult_total + child_total
-        
+
         return render(request, 'partials/fare_summary.html', {
             'adult_total': adult_total,
             'child_total': child_total,
@@ -689,7 +689,7 @@ def payment_view(request, booking_reference):
             'booking': booking,
             'payment_amount': payment_amount
         })
-        
+
     except Booking.DoesNotExist:
         messages.error(request, "Invalid booking reference.")
         return redirect('booking')
@@ -703,21 +703,21 @@ def booking_confirmation(request, booking_reference):
     """
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
-        
+
         # Get the associated payment if it exists
         try:
             payment = Payment.objects.get(booking=booking)
         except Payment.DoesNotExist:
             payment = None
-        
+
         context = {
             'booking': booking,
             'payment': payment,
             'schedule': booking.schedule,
         }
-        
+
         return render(request, 'booking_confirmation.html', context)
-        
+
     except Exception as e:
         messages.error(request, f"Error retrieving booking: {str(e)}")
         return redirect('home')
@@ -737,7 +737,7 @@ def calculate_change(request):
         amount_received = Decimal(request.GET.get('amount_received', 0))
         total_amount = Decimal(request.GET.get('total_amount', 0))
         change = amount_received - total_amount if amount_received > total_amount else Decimal('0.00')
-        
+
         return render(request, 'dashboard/partials/change_display.html', {
             'change': change,
             'is_sufficient': amount_received >= total_amount
@@ -749,7 +749,7 @@ def calculate_change(request):
 def routes_view(request):
     """Public view for displaying available routes"""
     routes = Route.objects.filter(active=True).order_by('name')
-    
+
     # Get upcoming schedules for each route
     for route in routes:
         route.upcoming_schedules = Schedule.objects.filter(
@@ -757,7 +757,7 @@ def routes_view(request):
             departure_datetime__gte=timezone.now(),
             status='scheduled'
         ).order_by('departure_datetime')[:3]
-    
+
     return render(request, 'routes.html', {'routes': routes})
 
 @login_required
@@ -767,21 +767,21 @@ def payment_list(request):
     Display a list of all payments for admin dashboard
     """
     payments = Payment.objects.all().order_by('-payment_date')
-    
+
     # Get filter parameters
     booking_ref = request.GET.get('booking_ref', '')
     payment_method = request.GET.get('payment_method', '')
-    
+
     # Apply filters if provided
     if booking_ref:
         payments = payments.filter(booking__booking_reference__icontains=booking_ref)
-    
+
     if payment_method:
         payments = payments.filter(payment_method=payment_method)
-    
+
     # Calculate total revenue
     total_revenue = payments.aggregate(total=models.Sum('amount_paid'))['total'] or 0
-    
+
     context = {
         'payments': payments,
         'total_revenue': total_revenue,
@@ -789,7 +789,7 @@ def payment_list(request):
         'selected_method': payment_method,
         'booking_ref': booking_ref
     }
-    
+
     return render(request, 'dashboard/payments.html', context)
 
 
@@ -803,7 +803,7 @@ def add_rating(request):
         try:
             vessel_id = request.POST.get('vessel')
             vessel = get_object_or_404(Vessel, id=vessel_id)
-            
+
             # Create new rating
             rating = Rating.objects.create(
                 vessel=vessel,
@@ -812,11 +812,11 @@ def add_rating(request):
                 full_name=request.POST.get('full_name'),
                 email=request.POST.get('email', '')
             )
-            
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
-    
+
     # GET requests should redirect to ratings list
     return redirect('dashboard_ratings')
 
@@ -827,11 +827,11 @@ def ratings(request):
     # Get all approved ratings ordered by creation date (newest first)
     # You might want to add an 'approved' field to your Rating model if you want to moderate reviews
     ratings_list = Rating.objects.all().order_by('-created_at')
-    
+
     # Calculate average rating
     avg_rating = ratings_list.aggregate(avg=models.Avg('rating'))['avg'] or 0
     avg_rating = round(avg_rating, 1)
-    
+
     # Get rating distribution
     rating_distribution = []
     for i in range(1, 6):
@@ -842,16 +842,16 @@ def ratings(request):
             'count': count,
             'percentage': round(percentage, 1)
         })
-    
+
     # Get all active vessels for the rating form
     vessels = Vessel.objects.filter(active=True).order_by('name')
-    
+
     # Handle form submission
     if request.method == 'POST':
         try:
             vessel_id = request.POST.get('vessel')
             vessel = get_object_or_404(Vessel, id=vessel_id)
-            
+
             # Create new rating
             rating = Rating.objects.create(
                 vessel=vessel,
@@ -860,19 +860,19 @@ def ratings(request):
                 full_name=request.POST.get('full_name'),
                 email=request.POST.get('email', '')
             )
-            
+
             messages.success(request, "Thank you for your feedback! Your rating has been submitted.")
             return redirect('ratings')
         except Exception as e:
             messages.error(request, f"Error submitting rating: {str(e)}")
-    
+
     context = {
         'ratings': ratings_list,
         'avg_rating': avg_rating,
         'rating_distribution': rating_distribution,
         'vessels': vessels
     }
-    
+
     return render(request, 'ratings.html', context)
 
 def get_schedule(request, pk):
@@ -881,7 +881,7 @@ def get_schedule(request, pk):
     """
     try:
         schedule = get_object_or_404(Schedule, pk=pk)
-        
+
         # Format the data for the response
         schedule_data = {
             'id': schedule.id,
@@ -906,7 +906,7 @@ def get_schedule(request, pk):
             'status': schedule.status,
             'notes': schedule.notes if hasattr(schedule, 'notes') else ''
         }
-        
+
         return JsonResponse({'success': True, 'schedule': schedule_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -917,7 +917,7 @@ def get_vessel_capacity(request, vessel_id):
     """
     try:
         vessel = get_object_or_404(Vessel, id=vessel_id)
-        
+
         # Return vessel capacity data
         capacity_data = {
             'id': vessel.id,
@@ -925,7 +925,7 @@ def get_vessel_capacity(request, vessel_id):
             'capacity_passengers': vessel.capacity_passengers,
             'capacity_cargo': vessel.capacity_cargo
         }
-        
+
         return JsonResponse({'success': True, 'capacity': capacity_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -938,7 +938,7 @@ def mark_payment_complete(request, booking_reference):
         try:
             booking = get_object_or_404(Booking, booking_reference=booking_reference)
             payment_method = request.POST.get('payment_method', 'online')
-            
+
             # Calculate payment amount based on booking type
             payment_amount = 0
             if booking.booking_type == 'passenger':
@@ -948,25 +948,25 @@ def mark_payment_complete(request, booking_reference):
                 # Base price for vehicle + additional for passengers
                 base_price = booking.vehicle_type.price if booking.vehicle_type else 100
                 payment_amount = base_price + (20 * booking.occupant_count)
-            
+
             # Create payment record
             payment = Payment.objects.create(
                 booking=booking,
                 amount_paid=payment_amount,
                 payment_method=payment_method
             )
-            
+
             # Update booking status
             booking.is_paid = True
             booking.save()
-            
+
             messages.success(request, "Payment successful! Your booking is confirmed.")
             return redirect('booking_confirmation', booking_reference=booking.booking_reference)
-            
+
         except Booking.DoesNotExist:
             messages.error(request, "Invalid booking reference.")
             return redirect('home')
-    
+
     # If not POST, redirect to payment page
     return redirect('payment_view')
 import qrcode
@@ -1011,7 +1011,7 @@ def get_booking_details(request, booking_reference):
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
         total_amount = calculate_booking_payment(booking)
-        
+
         booking_data = {
             'success': True,
             'booking_type': booking.get_booking_type_display(),
@@ -1024,7 +1024,7 @@ def get_booking_details(request, booking_reference):
             'is_paid': booking.is_paid,
             'created_at': booking.created_at.strftime('%B %d, %Y %I:%M %p'),
         }
-        
+
         if booking.booking_type == 'passenger':
             booking_data.update({
                 'number_of_passengers': booking.number_of_passengers,
@@ -1037,7 +1037,7 @@ def get_booking_details(request, booking_reference):
                 'occupant_count': booking.occupant_count,
                 'cargo_weight': float(booking.cargo_weight or 0)
             })
-        
+
         return JsonResponse(booking_data)
     except Booking.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Booking not found'}, status=404)
@@ -1048,12 +1048,12 @@ def generate_qr_code(request, booking_reference):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(booking_reference)  # Just the reference, no extra formatting
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = BytesIO()
     img.save(buffer, format='PNG')
     buffer.seek(0)
-    
+
     return HttpResponse(buffer, content_type='image/png')
 
 
@@ -1070,7 +1070,7 @@ def booking_details_html(request):
     reference = request.GET.get('payment-reference')
     if not reference:
         return HttpResponse('')
-    
+
     try:
         booking = Booking.objects.select_related(
             'schedule',
@@ -1078,7 +1078,7 @@ def booking_details_html(request):
             'schedule__vessel',
             'vehicle_type'
         ).get(booking_reference=reference)
-        
+
         # Calculate fares based on booking type
         if booking.booking_type == 'passenger':
             adult_fare = booking.schedule.adult_fare or Decimal('0')
@@ -1096,12 +1096,12 @@ def booking_details_html(request):
             else:
                 booking.vehicle_fare_total = Decimal('0')
                 total_amount = Decimal('0')
-            
+
         return render(request, 'dashboard/partials/booking_details.html', {
             'booking': booking,
             'total_amount': total_amount
         })
-        
+
     except Booking.DoesNotExist:
         return render(request, 'dashboard/partials/booking_details.html', {
             'booking': None
@@ -1127,7 +1127,7 @@ def submit_rating(request):
             vessel_id = request.POST.get('vessel')
             rating = request.POST.get('rating')
             comment = request.POST.get('comment')
-            
+
             # Create new rating (initially not approved)
             new_rating = Rating.objects.create(
                 user=request.user,
@@ -1137,18 +1137,18 @@ def submit_rating(request):
                 is_approved=False,  # Set to false by default
                 full_name=request.user.get_full_name() or request.user.username
             )
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Thank you! Your review will be visible after approval.'
             })
-            
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             })
-            
+
     return JsonResponse({
         'success': False,
         'error': 'Invalid request method'
@@ -1160,11 +1160,11 @@ def ratings(request):
     """
     # Get all approved ratings ordered by creation date
     ratings_list = Rating.objects.filter(is_approved=True).order_by('-created_at')
-    
+
     # Calculate average rating
     avg_rating = ratings_list.aggregate(avg=models.Avg('rating'))['avg'] or 0
     avg_rating = round(avg_rating, 1)
-    
+
     # Get rating distribution
     rating_distribution = []
     for i in range(1, 6):
@@ -1175,18 +1175,18 @@ def ratings(request):
             'count': count,
             'percentage': round(percentage, 1)
         })
-    
+
     # Get all active vessels for the rating form
     vessels = Vessel.objects.filter(active=True).order_by('name')
-    
+
     # Get user's existing ratings if authenticated
     user_ratings = {}
     if request.user.is_authenticated:
         user_ratings = {
-            rating.vessel_id: rating 
+            rating.vessel_id: rating
             for rating in Rating.objects.filter(user=request.user)
         }
-    
+
     context = {
         'ratings': ratings_list,
         'avg_rating': avg_rating,
@@ -1194,7 +1194,7 @@ def ratings(request):
         'vessels': vessels,
         'user_ratings': user_ratings
     }
-    
+
     return render(request, 'ratings.html', context)
 
 
@@ -1219,10 +1219,10 @@ def booking(request):
         departure_datetime__gt=timezone.now(),
         status='scheduled'
     ).order_by('departure_datetime')
-    
+
     # Get all vehicle types for the vehicle booking form
     vehicle_types = VehicleType.objects.all()
-    
+
     # Check if a specific schedule was selected
     selected_schedule = None
     if request.GET.get('schedule'):
@@ -1234,13 +1234,13 @@ def booking(request):
         except Schedule.DoesNotExist:
             messages.error(request, "The selected schedule does not exist.")
             return redirect('booking')
-    
+
     context = {
         'schedules': schedules,
         'vehicle_types': vehicle_types,
         'selected_schedule': selected_schedule,
     }
-    
+
     return render(request, 'booking.html', context)
 
 
@@ -1276,12 +1276,12 @@ def calculate_fare(request):
         schedule_id = request.GET.get('schedule')
         adult_count = int(request.GET.get('adult_passengers', 0))
         child_count = int(request.GET.get('child_passengers', 0))
-        
+
         schedule = Schedule.objects.get(id=schedule_id)
         adult_total = schedule.adult_fare * adult_count
         child_total = schedule.child_fare * child_count
         total = adult_total + child_total
-        
+
         return render(request, 'partials/fare_summary.html', {
             'adult_total': adult_total,
             'child_total': child_total,
@@ -1315,7 +1315,7 @@ def payment_view(request, booking_reference):
             'booking': booking,
             'payment_amount': payment_amount
         })
-        
+
     except Booking.DoesNotExist:
         messages.error(request, "Invalid booking reference.")
         return redirect('booking')
@@ -1329,21 +1329,21 @@ def booking_confirmation(request, booking_reference):
     """
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
-        
+
         # Get the associated payment if it exists
         try:
             payment = Payment.objects.get(booking=booking)
         except Payment.DoesNotExist:
             payment = None
-        
+
         context = {
             'booking': booking,
             'payment': payment,
             'schedule': booking.schedule,
         }
-        
+
         return render(request, 'booking_confirmation.html', context)
-        
+
     except Exception as e:
         messages.error(request, f"Error retrieving booking: {str(e)}")
         return redirect('home')
@@ -1448,7 +1448,7 @@ def reports_view(request):
     # Generate revenue data for chart
     revenue_data = []
     revenue_labels = []
-    
+
     # Get data for the last 12 months
     for i in range(11, -1, -1):
         date = timezone.now() - timezone.timedelta(days=i*30)
@@ -1459,7 +1459,7 @@ def reports_view(request):
         ).aggregate(
             total=Coalesce(Sum('total_fare'), Value(0, output_field=DecimalField()))
         )['total']
-        
+
         revenue_data.append(float(month_revenue))
         revenue_labels.append(date.strftime('%b %Y'))
 
@@ -1485,7 +1485,7 @@ def reports_view(request):
 def routes_view(request):
     """Public view for displaying available routes"""
     routes = Route.objects.filter(active=True).order_by('name')
-    
+
     # Get upcoming schedules for each route
     for route in routes:
         route.upcoming_schedules = Schedule.objects.filter(
@@ -1493,7 +1493,7 @@ def routes_view(request):
             departure_datetime__gte=timezone.now(),
             status='scheduled'
         ).order_by('departure_datetime')[:3]
-    
+
     return render(request, 'routes.html', {'routes': routes})
 
 @login_required
@@ -1503,21 +1503,21 @@ def payment_list(request):
     Display a list of all payments for admin dashboard
     """
     payments = Payment.objects.all().order_by('-payment_date')
-    
+
     # Get filter parameters
     booking_ref = request.GET.get('booking_ref', '')
     payment_method = request.GET.get('payment_method', '')
-    
+
     # Apply filters if provided
     if booking_ref:
         payments = payments.filter(booking__booking_reference__icontains=booking_ref)
-    
+
     if payment_method:
         payments = payments.filter(payment_method=payment_method)
-    
+
     # Calculate total revenue
     total_revenue = payments.aggregate(total=models.Sum('amount_paid'))['total'] or 0
-    
+
     context = {
         'payments': payments,
         'total_revenue': total_revenue,
@@ -1525,7 +1525,7 @@ def payment_list(request):
         'selected_method': payment_method,
         'booking_ref': booking_ref
     }
-    
+
     return render(request, 'dashboard/payments.html', context)
 
 @login_required
@@ -1536,22 +1536,22 @@ def dashboard_ratings(request):
     """
     # Get all ratings ordered by creation date (newest first)
     ratings = Rating.objects.all().order_by('-created_at')
-    
+
     # Get filter parameters
     min_rating = request.GET.get('min_rating', '')
     vessel_id = request.GET.get('vessel', '')
-    
+
     # Apply filters if provided
     if min_rating and min_rating.isdigit():
         ratings = ratings.filter(rating__gte=int(min_rating))
-    
+
     if vessel_id and vessel_id.isdigit():
         ratings = ratings.filter(vessel_id=int(vessel_id))
-    
+
     # Calculate average rating
     avg_rating = ratings.aggregate(avg=models.Avg('rating'))['avg'] or 0
     avg_rating = round(avg_rating, 1)
-    
+
     # Get rating distribution
     rating_distribution = []
     for i in range(1, 6):
@@ -1562,10 +1562,10 @@ def dashboard_ratings(request):
             'count': count,
             'percentage': round(percentage, 1)
         })
-    
+
     # Get all vessels for the filter dropdown
     vessels = Vessel.objects.filter(active=True).order_by('name')
-    
+
     context = {
         'ratings': ratings,
         'avg_rating': avg_rating,
@@ -1574,7 +1574,7 @@ def dashboard_ratings(request):
         'min_rating': min_rating,
         'selected_vessel': vessel_id
     }
-    
+
     return render(request, 'dashboard/ratings.html', context)
 
 @staff_member_required
@@ -1586,7 +1586,7 @@ def add_rating(request):
         try:
             vessel_id = request.POST.get('vessel')
             vessel = get_object_or_404(Vessel, id=vessel_id)
-            
+
             # Create new rating
             rating = Rating.objects.create(
                 vessel=vessel,
@@ -1595,11 +1595,11 @@ def add_rating(request):
                 full_name=request.POST.get('full_name'),
                 email=request.POST.get('email', '')
             )
-            
+
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
-    
+
     # GET requests should redirect to ratings list
     return redirect('dashboard_ratings')
 
@@ -1610,11 +1610,11 @@ def ratings(request):
     # Get all approved ratings ordered by creation date (newest first)
     # You might want to add an 'approved' field to your Rating model if you want to moderate reviews
     ratings_list = Rating.objects.all().order_by('-created_at')
-    
+
     # Calculate average rating
     avg_rating = ratings_list.aggregate(avg=models.Avg('rating'))['avg'] or 0
     avg_rating = round(avg_rating, 1)
-    
+
     # Get rating distribution
     rating_distribution = []
     for i in range(1, 6):
@@ -1625,16 +1625,16 @@ def ratings(request):
             'count': count,
             'percentage': round(percentage, 1)
         })
-    
+
     # Get all active vessels for the rating form
     vessels = Vessel.objects.filter(active=True).order_by('name')
-    
+
     # Handle form submission
     if request.method == 'POST':
         try:
             vessel_id = request.POST.get('vessel')
             vessel = get_object_or_404(Vessel, id=vessel_id)
-            
+
             # Create new rating
             rating = Rating.objects.create(
                 vessel=vessel,
@@ -1643,19 +1643,19 @@ def ratings(request):
                 full_name=request.POST.get('full_name'),
                 email=request.POST.get('email', '')
             )
-            
+
             messages.success(request, "Thank you for your feedback! Your rating has been submitted.")
             return redirect('ratings')
         except Exception as e:
             messages.error(request, f"Error submitting rating: {str(e)}")
-    
+
     context = {
         'ratings': ratings_list,
         'avg_rating': avg_rating,
         'rating_distribution': rating_distribution,
         'vessels': vessels
     }
-    
+
     return render(request, 'ratings.html', context)
 
 @login_required
@@ -1666,7 +1666,7 @@ def get_schedule(request, schedule_id):
     """API endpoint for getting schedule details"""
     try:
         schedule = get_object_or_404(Schedule, pk=schedule_id)
-        
+
         return JsonResponse({
             'success': True,
             'schedule': {
@@ -1704,15 +1704,15 @@ logger = logging.getLogger(__name__)
 def rating_details(request, rating_id):
     logger.debug(f"Rating details requested for ID: {rating_id}")
     logger.debug(f"Headers: {request.headers}")
-    
+
     rating = get_object_or_404(Rating.objects.select_related('vessel'), id=rating_id)
-    
+
     if 'HX-Request' in request.headers:
         logger.debug("HTMX request detected, rendering partial template")
         return render(request, 'dashboard/partials/rating_details.html', {
             'rating': rating
         })
-    
+
     logger.debug("Non-HTMX request detected")
     return JsonResponse({'error': 'HTMX request required'}, status=400)
 
@@ -1724,7 +1724,7 @@ def get_vessel_capacity(request, vessel_id):
     """
     try:
         vessel = get_object_or_404(Vessel, id=vessel_id)
-        
+
         # Return vessel capacity data
         capacity_data = {
             'id': vessel.id,
@@ -1732,7 +1732,7 @@ def get_vessel_capacity(request, vessel_id):
             'capacity_passengers': vessel.capacity_passengers,
             'capacity_cargo': vessel.capacity_cargo
         }
-        
+
         return JsonResponse({'success': True, 'capacity': capacity_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -1740,7 +1740,7 @@ def get_vessel_capacity(request, vessel_id):
 # Add this to your payment confirmation view
 def mark_payment_complete(request, booking_reference):
     booking = get_object_or_404(Booking, booking_reference=booking_reference)
-    
+
     # Create payment record with ACTUAL booking amount
     payment = Payment.objects.create(
         booking=booking,
@@ -1748,11 +1748,11 @@ def mark_payment_complete(request, booking_reference):
         payment_method='cash',
         payment_reference=f'PAY-{timezone.now().strftime("%Y%m%d")}-{booking_reference[-6:]}',
     )
-    
+
     # Mark booking as paid
     booking.is_paid = True
     booking.save()
-    
+
     return redirect('booking_confirmation', booking_reference=booking_reference)
 
 import qrcode
@@ -1773,7 +1773,7 @@ def get_booking_details(request, booking_reference):
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
         total_amount = calculate_booking_payment(booking)
-        
+
         booking_data = {
             'success': True,
             'booking_type': booking.get_booking_type_display(),
@@ -1786,7 +1786,7 @@ def get_booking_details(request, booking_reference):
             'is_paid': booking.is_paid,
             'created_at': booking.created_at.strftime('%B %d, %Y %I:%M %p'),
         }
-        
+
         if booking.booking_type == 'passenger':
             booking_data.update({
                 'number_of_passengers': booking.number_of_passengers,
@@ -1799,7 +1799,7 @@ def get_booking_details(request, booking_reference):
                 'occupant_count': booking.occupant_count,
                 'cargo_weight': float(booking.cargo_weight or 0)
             })
-        
+
         return JsonResponse(booking_data)
     except Booking.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Booking not found'}, status=404)
@@ -1810,12 +1810,12 @@ def generate_qr_code(request, booking_reference):
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(booking_reference)  # Just the reference, no extra formatting
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = BytesIO()
     img.save(buffer, format='PNG')
     buffer.seek(0)
-    
+
     return HttpResponse(buffer, content_type='image/png')
 
 
@@ -1853,13 +1853,13 @@ def vessels_view(request):
 
 def schedule_view(request):
     schedules = Schedule.objects.all()
-    
-    
+
+
     return render(request, 'dashboard/schedules.html', {'schedules': schedules})
 
 def routes_view(request):
     routes = Route.objects.all()
-    
+
     return render(request, 'dashboard/routes.html', {'routes': routes})
 def booking(request):
     """View for displaying and handling the booking form"""
@@ -1868,10 +1868,10 @@ def booking(request):
         departure_datetime__gt=timezone.now(),
         status='scheduled'
     ).order_by('departure_datetime')
-    
+
     # Get all vehicle types for the vehicle booking form
     vehicle_types = VehicleType.objects.all()
-    
+
     # Check if a specific schedule was selected
     selected_schedule = None
     if request.GET.get('schedule'):
@@ -1883,13 +1883,13 @@ def booking(request):
         except Schedule.DoesNotExist:
             messages.error(request, "The selected schedule does not exist.")
             return redirect('booking')
-    
+
     context = {
         'schedules': schedules,
         'vehicle_types': vehicle_types,
         'selected_schedule': selected_schedule,
     }
-    
+
     return render(request, 'booking.html', context)
 
 
@@ -1904,19 +1904,19 @@ def create_booking(request):
     """Process the booking form submission"""
     if request.method != 'POST':
         return redirect('booking')
-    
+
     try:
         # Get selected schedule
         schedule_id = request.POST.get('schedule')
         if not schedule_id:
             messages.error(request, "No schedule selected.")
             return redirect('booking')
-        
+
         schedule = get_object_or_404(Schedule, id=schedule_id)
-        
+
         # Get common booking data
         booking_type = request.POST.get('booking_type', 'passenger')
-        
+
         # Create new booking with common fields
         booking = Booking(
             schedule=schedule,
@@ -1927,7 +1927,7 @@ def create_booking(request):
             email=request.POST.get('email'),
             is_paid=False
         )
-        
+
         # Set type-specific fields
         if booking_type == 'passenger':
             booking.adult_passengers = int(request.POST.get('adult_passengers', 0) or 0)
@@ -1939,36 +1939,57 @@ def create_booking(request):
             vehicle_type_id = request.POST.get('vehicle_type')
             if vehicle_type_id:
                 booking.vehicle_type = get_object_or_404(VehicleType, id=vehicle_type_id)
-            
+
             booking.plate_number = request.POST.get('plate_number', '')
             booking.occupant_count = int(request.POST.get('occupant_count', 1) or 1)
             booking.cargo_weight = Decimal(request.POST.get('cargo_weight', 0) or 0)
             # Set fare rates to 0 for vehicle bookings to satisfy NOT NULL constraint
             booking.adult_fare_rate = Decimal('0.00')
             booking.child_fare_rate = Decimal('0.00')
-        
+
         # Save the booking
         booking.save()
+
+        # Save individual passenger information if it's a passenger booking
+        if booking_type == 'passenger':
+            # Process adult passengers
+            for i in range(1, booking.adult_passengers + 1):
+                passenger_name = request.POST.get(f'adult_passenger_name_{i}')
+                if passenger_name:
+                    Passenger.objects.create(
+                        booking=booking,
+                        full_name=passenger_name,
+                        passenger_type='adult'
+                    )
+
+            # Process child passengers
+            for i in range(1, booking.child_passengers + 1):
+                passenger_name = request.POST.get(f'child_passenger_name_{i}')
+                if passenger_name:
+                    Passenger.objects.create(
+                        booking=booking,
+                        full_name=passenger_name,
+                        passenger_type='child'
+                    )
+
         # Redirect to payment
         messages.success(request, "Booking created successfully. Please complete your payment.")
         return redirect('payment', booking_reference=booking.booking_reference)
-        
+
     except Exception as e:
         messages.error(request, f"Error creating booking: {str(e)}")
         return redirect('booking')
-    
-def get_schedule_fares(request, schedule_id):
-    """API endpoint to get fare information for a specific schedule"""
-    schedule = get_object_or_404(Schedule, id=schedule_id)
-    return JsonResponse({
-        'adult_fare': str(schedule.adult_fare),
-        'child_fare': str(schedule.child_fare)
-    })
-
 
 def get_schedule_fares(request, schedule_id):
     """API endpoint to get fare information for a specific schedule"""
     try:
+        # Check if schedule_id is valid
+        if not schedule_id or schedule_id == '0':
+            return JsonResponse({
+                'success': False,
+                'error': 'Please select a valid schedule'
+            }, status=400)
+
         schedule = get_object_or_404(Schedule, id=schedule_id)
         return JsonResponse({
             'success': True,
@@ -1985,19 +2006,27 @@ def calculate_fare(request):
     """HTMX endpoint for calculating fares"""
     try:
         schedule_id = request.GET.get('schedule')
+
+        # Check if schedule_id is empty or None
+        if not schedule_id or schedule_id == '0':
+            return HttpResponse("Please select a schedule first")
+
         adult_count = int(request.GET.get('adult_passengers', 0))
         child_count = int(request.GET.get('child_passengers', 0))
-        
-        schedule = Schedule.objects.get(id=schedule_id)
-        adult_total = schedule.adult_fare * adult_count
-        child_total = schedule.child_fare * child_count
-        total = adult_total + child_total
-        
-        return render(request, 'partials/fare_summary.html', {
-            'adult_total': adult_total,
-            'child_total': child_total,
-            'total': total
-        })
+
+        try:
+            schedule = Schedule.objects.get(id=schedule_id)
+            adult_total = schedule.adult_fare * adult_count
+            child_total = schedule.child_fare * child_count
+            total = adult_total + child_total
+
+            return render(request, 'partials/fare_summary.html', {
+                'adult_total': adult_total,
+                'child_total': child_total,
+                'total': total
+            })
+        except Schedule.DoesNotExist:
+            return HttpResponse("Selected schedule not found")
     except Exception as e:
         return HttpResponse(f"Error calculating fare: {str(e)}")
 
@@ -2024,7 +2053,7 @@ def payment_view(request, booking_reference):
             'booking': booking,
             'payment_amount': payment_amount
         })
-        
+
     except Booking.DoesNotExist:
         messages.error(request, "Invalid booking reference.")
         return redirect('booking')
@@ -2038,21 +2067,21 @@ def booking_confirmation(request, booking_reference):
     """
     try:
         booking = get_object_or_404(Booking, booking_reference=booking_reference)
-        
+
         # Get the associated payment if it exists
         try:
             payment = Payment.objects.get(booking=booking)
         except Payment.DoesNotExist:
             payment = None
-        
+
         context = {
             'booking': booking,
             'payment': payment,
             'schedule': booking.schedule,
         }
-        
+
         return render(request, 'booking_confirmation.html', context)
-        
+
     except Exception as e:
         messages.error(request, f"Error retrieving booking: {str(e)}")
         return redirect('home')
@@ -2068,7 +2097,7 @@ def contact_view(request):
         name = request.POST.get('name')
         email = request.POST.get('email')
         message = request.POST.get('message')
-        
+
         try:
             # Create contact message record
             ContactMessage.objects.create(
@@ -2076,13 +2105,13 @@ def contact_view(request):
                 email=email,
                 message=message
             )
-            
+
             messages.success(request, "Your message has been sent successfully. We'll get back to you soon.")
             return redirect('contact')
-            
+
         except Exception as e:
             messages.error(request, "There was an error sending your message. Please try again.")
-            
+
     # For GET requests, just display the contact form
     return render(request, 'contact.html')
 
@@ -2094,7 +2123,7 @@ def vessel_list(request):
     """View for displaying and managing vessels in the dashboard"""
     # Get all vessels with their related schedules
     vessels = Vessel.objects.all().prefetch_related('schedule_set')
-    
+
     # Handle search
     search_query = request.GET.get('search', '')
     if search_query:
@@ -2103,25 +2132,25 @@ def vessel_list(request):
             Q(capacity__icontains=search_query) |
             Q(vessel_type__icontains=search_query)
         )
-    
+
     # Pagination
     page = request.GET.get('page', 1)
     paginator = Paginator(vessels, 10)  # Show 10 vessels per page
-    
+
     try:
         vessels = paginator.page(page)
     except PageNotAnInteger:
         vessels = paginator.page(1)
     except EmptyPage:
         vessels = paginator.page(paginator.num_pages)
-    
+
     context = {
         'vessels': vessels,
         'search_query': search_query,
         'active_tab': 'vessels'
     }
-    
-    
+
+
     return render(request, 'dashboard/vessels.html', context)
 
 
@@ -2133,39 +2162,39 @@ def schedule_list(request):
     """View for displaying and managing schedules in the dashboard"""
     # Get all schedules with related vessels and routes
     schedules = Schedule.objects.select_related('vessel', 'route').order_by('departure_datetime')
-    
+
     # Handle search and filtering
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     date_filter = request.GET.get('date', '')
-    
+
     if search_query:
         schedules = schedules.filter(
             Q(vessel__name__icontains=search_query) |
             Q(route__name__icontains=search_query)
         )
-    
+
     if status_filter:
         schedules = schedules.filter(status=status_filter)
-        
+
     if date_filter:
         try:
             filter_date = timezone.datetime.strptime(date_filter, '%Y-%m-%d').date()
             schedules = schedules.filter(departure_datetime__date=filter_date)
         except ValueError:
             pass
-    
+
     # Pagination
     paginator = Paginator(schedules, 15)  # Show 15 schedules per page
     page = request.GET.get('page', 1)
-    
+
     try:
         schedules = paginator.page(page)
     except PageNotAnInteger:
         schedules = paginator.page(1)
     except EmptyPage:
         schedules = paginator.page(paginator.num_pages)
-    
+
     context = {
         'schedules': schedules,
         'search_query': search_query,
@@ -2174,8 +2203,8 @@ def schedule_list(request):
         'active_tab': 'schedules',
         'status_choices': Schedule.STATUS_CHOICES,
     }
-    
-   
+
+
     return render(request, 'dashboard/schedules.html', context)
 
 
@@ -2186,13 +2215,13 @@ def booking_list(request):
     """View for displaying and managing bookings in the dashboard"""
     # Get all bookings with related schedules and payments
     bookings = Booking.objects.select_related(
-        'schedule__vessel', 
+        'schedule__vessel',
         'schedule__route',
         'vehicle_type'  # Add this line to include vehicle_type
     ).prefetch_related(
         'payment_set'
     ).order_by('-created_at')
-    
+
     # Handle search and filtering
     search_query = request.GET.get('search', '')
     booking_type = request.GET.get('booking_type', '')
@@ -2200,7 +2229,7 @@ def booking_list(request):
     vehicle_type = request.GET.get('vehicle_type', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
-    
+
     if search_query:
         bookings = bookings.filter(
             Q(booking_reference__icontains=search_query) |
@@ -2208,7 +2237,7 @@ def booking_list(request):
             Q(contact_number__icontains=search_query) |
             Q(email__icontains=search_query)
         )
-    
+
     if booking_type:
         bookings = bookings.filter(booking_type=booking_type)
 
@@ -2220,21 +2249,21 @@ def booking_list(request):
 
     if date_from:
         bookings = bookings.filter(created_at__date__gte=date_from)
-    
+
     if date_to:
         bookings = bookings.filter(created_at__date__lte=date_to)
-    
+
     # Pagination
     paginator = Paginator(bookings, 20)  # Show 20 bookings per page
     page = request.GET.get('page', 1)
-    
+
     try:
         bookings = paginator.page(page)
     except PageNotAnInteger:
         bookings = paginator.page(1)
     except EmptyPage:
         bookings = paginator.page(paginator.num_pages)
-    
+
     context = {
         'bookings': bookings,
         'search_query': search_query,
@@ -2246,7 +2275,7 @@ def booking_list(request):
         'active_tab': 'bookings',
         'vehicle_types': VehicleType.objects.all(),
     }
-    
+
     return render(request, 'dashboard/bookings.html', context)
 
 def get_vessel_capacity(request, vessel_id):
@@ -2280,7 +2309,7 @@ def booking_create(request):
             # Get schedule
             schedule_id = request.POST.get('schedule')
             schedule = get_object_or_404(Schedule, id=schedule_id)
-            
+
             # Create booking
             booking = Booking.objects.create(
                 schedule=schedule,
@@ -2295,13 +2324,13 @@ def booking_create(request):
                 booking_reference=generate_booking_reference(),
                 created_by=request.user
             )
-            
+
             messages.success(request, f'Booking {booking.booking_reference} created successfully')
-            
+
             if request.htmx:
                 return render(request, 'dashboard/partials/booking_success.html', {'booking': booking})
             return redirect('booking_view', pk=booking.id)
-            
+
         except Exception as e:
             messages.error(request, f'Error creating booking: {str(e)}')
             if request.htmx:
@@ -2310,7 +2339,7 @@ def booking_create(request):
                     status=400
                 )
             return redirect('booking_create')
-    
+
     # For GET requests
     context = {
         'schedules': Schedule.objects.filter(
@@ -2320,7 +2349,7 @@ def booking_create(request):
         'vehicle_types': VehicleType.objects.all(),
         'active_tab': 'bookings'
     }
-    
+
     if request.htmx:
         return render(request, 'dashboard/partials/booking_form.html', context)
     return render(request, 'dashboard/booking_create.html', context)
@@ -2333,47 +2362,47 @@ def route_list(request):
     routes = Route.objects.prefetch_related(
         'schedule_set'
     ).order_by('name')
-    
+
     # Handle search and filtering
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('active', '')
-    
+
     if search_query:
         routes = routes.filter(
             Q(name__icontains=search_query) |
             Q(origin__icontains=search_query) |
             Q(destination__icontains=search_query)
         )
-    
+
     if status_filter:
         routes = routes.filter(active=status_filter == 'true')
-    
+
     # Add schedule count and latest schedule for each route
     for route in routes:
         route.schedule_count = route.schedule_set.count()
         route.latest_schedule = route.schedule_set.filter(
             departure_datetime__gt=timezone.now()
         ).order_by('departure_datetime').first()
-    
+
     # Pagination
     paginator = Paginator(routes, 15)  # Show 15 routes per page
     page = request.GET.get('page', 1)
-    
+
     try:
         routes = paginator.page(page)
     except PageNotAnInteger:
         routes = paginator.page(1)
     except EmptyPage:
         routes = paginator.page(paginator.num_pages)
-    
+
     context = {
         'routes': routes,
         'search_query': search_query,
         'status_filter': status_filter,
         'active_tab': 'routes'
     }
-    
- 
+
+
     return render(request, 'dashboard/routes.html', context)
 @login_required
 @staff_member_required
@@ -2386,7 +2415,7 @@ def add_route(request):
             duration_str = request.POST.get('estimated_duration')
             hours, minutes = map(int, duration_str.split(':'))
             duration = timedelta(hours=hours, minutes=minutes)
-            
+
             # Create new route
             route = Route.objects.create(
                 name=request.POST.get('name'),
@@ -2398,10 +2427,10 @@ def add_route(request):
                 description=request.POST.get('description', ''),
                 created_by=request.user
             )
-            
+
             messages.success(request, f'Route "{route.name}" created successfully')
             return redirect('route_list')
-            
+
         except Exception as e:
             messages.error(request, f'Error creating route: {str(e)}')
 
@@ -2436,7 +2465,7 @@ def edit_schedule(request, schedule_id):
 
     try:
         schedule = get_object_or_404(Schedule, pk=schedule_id)
-        
+
         # Update schedule fields
         schedule.vessel_id = request.POST.get('vessel')
         schedule.route_id = request.POST.get('route')
@@ -2448,9 +2477,9 @@ def edit_schedule(request, schedule_id):
         schedule.child_fare = request.POST.get('child_fare')
         schedule.status = request.POST.get('status')
         schedule.notes = request.POST.get('notes')
-        
+
         schedule.save()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Schedule updated successfully'
@@ -2486,14 +2515,14 @@ def get_route(request, pk):
 def edit_route(request, pk):
     """View for editing existing routes"""
     route = get_object_or_404(Route, pk=pk)
-    
+
     if request.method == 'POST':
         try:
             # Convert HH:MM string to timedelta
             duration_str = request.POST.get('estimated_duration')
             hours, minutes = map(int, duration_str.split(':'))
             duration = timedelta(hours=hours, minutes=minutes)
-            
+
             # Update route
             route.name = request.POST.get('name')
             route.origin = request.POST.get('origin')
@@ -2503,18 +2532,18 @@ def edit_route(request, pk):
             route.active = request.POST.get('active') == 'on'
             route.description = request.POST.get('description', '')
             route.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'message': f'Route "{route.name}" updated successfully'
             })
-            
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             })
-    
+
     return JsonResponse({
         'success': False,
         'error': 'Invalid request method'
@@ -2541,7 +2570,7 @@ def delete_route(request, pk):
 @staff_member_required
 def booking_view(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
-    
+
     # Calculate total fare based on booking type
     if booking.booking_type == 'vehicle':
         total_fare = booking.vehicle_type.base_fare if booking.vehicle_type else 0
@@ -2557,7 +2586,7 @@ def booking_view(request, pk):
         'total_fare': total_fare,
         'payment': booking.payment_set.first(),
     }
-   
+
     return render(request, 'dashboard/booking_view.html', context)
 
 @login_required
@@ -2566,9 +2595,9 @@ def booking_mark_paid(request, pk):
     """View for marking a booking as paid from the dashboard"""
     if request.method != 'POST':
         return HttpResponse(status=405)  # Method Not Allowed
-        
+
     booking = get_object_or_404(Booking, pk=pk)
-    
+
     try:
         if booking.is_paid:
             messages.warning(request, 'This booking is already marked as paid.')
@@ -2579,14 +2608,14 @@ def booking_mark_paid(request, pk):
                     '</div>'
                 )
             return redirect('booking_view', pk=pk)
-        
+
         # Calculate payment amount
         payment_amount = (
             booking.adult_passengers * booking.schedule.adult_fare +
             booking.child_passengers * booking.schedule.child_fare +
             (booking.vehicle_type.fare if booking.vehicle_type else 0)
         )
-        
+
         # Create payment record
         Payment.objects.create(
             booking=booking,
@@ -2595,20 +2624,20 @@ def booking_mark_paid(request, pk):
             payment_date=timezone.now(),
             processed_by=request.user
         )
-        
+
         # Update booking status
         booking.is_paid = True
         booking.save()
-        
+
         messages.success(request, f'Booking #{booking.booking_reference} has been marked as paid.')
-        
+
         if request.htmx:
             return render(request, 'dashboard/partials/booking_payment_success.html', {
                 'booking': booking,
                 'payment_amount': payment_amount
             })
         return redirect('booking_view', pk=pk)
-        
+
     except Exception as e:
         messages.error(request, f'Error processing payment: {str(e)}')
         if request.htmx:
@@ -2624,14 +2653,14 @@ def booking_mark_paid(request, pk):
 def booking_print(request, pk):
     """View for generating printable booking details"""
     booking = get_object_or_404(Booking, pk=pk)
-    
+
     # Calculate total fare
     total_fare = (
         booking.adult_passengers * booking.schedule.adult_fare +
         booking.child_passengers * booking.schedule.child_fare +
         (booking.vehicle_type.fare if booking.vehicle_type else 0)
     )
-    
+
     context = {
         'booking': booking,
         'total_fare': total_fare,
@@ -2641,14 +2670,14 @@ def booking_print(request, pk):
         'company_contact': 'Your Company Contact',  # Customize as needed
         'print_date': timezone.now(),
     }
-    
+
     # Use a print-specific template
     response = render(request, 'dashboard/print/booking_print.html', context)
-    
+
     # Set print-friendly headers
     response['Content-Type'] = 'text/html'
     response['Content-Disposition'] = f'inline; filename="booking-{booking.booking_reference}.html"'
-    
+
     return response
 @login_required
 @staff_member_required
@@ -2662,26 +2691,26 @@ def add_vessel(request):
                 capacity_cargo=request.POST.get('capacity_cargo'),
                 active=request.POST.get('active') == 'on'
             )
-            
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
                     'message': 'Vessel added successfully'
                 })
-            
+
             messages.success(request, 'Vessel added successfully')
             return redirect('vessel_list')
-            
+
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'error': str(e)
                 })
-            
+
             messages.error(request, f'Error adding vessel: {str(e)}')
             return redirect('vessel_list')
-    
+
     # This view doesn't need a GET handler as it uses a modal form in vessels.html
     return redirect('vessel_list')
 
@@ -2691,7 +2720,7 @@ def add_vessel(request):
 def edit_vessel(request, vessel_id):
     """View for editing an existing vessel"""
     vessel = get_object_or_404(Vessel, id=vessel_id)
-    
+
     if request.method == 'POST':
         try:
             # Update vessel fields from form data
@@ -2700,26 +2729,26 @@ def edit_vessel(request, vessel_id):
             vessel.capacity_cargo = request.POST.get('capacity_cargo')
             vessel.active = request.POST.get('active') == 'on'
             vessel.save()
-            
+
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
                     'message': 'Vessel updated successfully'
                 })
-            
+
             messages.success(request, 'Vessel updated successfully')
             return redirect('vessel_list')
-            
+
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'error': str(e)
                 })
-            
+
             messages.error(request, f'Error updating vessel: {str(e)}')
             return redirect('vessel_list')
-    
+
     # This view doesn't need a GET handler as it uses a modal form
     return redirect('vessel_list')
 @login_required
@@ -2727,28 +2756,28 @@ def edit_vessel(request, vessel_id):
 def delete_vessel(request, vessel_id):
     """View for deleting a vessel"""
     vessel = get_object_or_404(Vessel, id=vessel_id)
-    
+
     try:
         vessel_name = vessel.name
         vessel.delete()
-        
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'message': f'Vessel "{vessel_name}" deleted successfully'
             })
-        
+
         messages.success(request, f'Vessel "{vessel_name}" deleted successfully')
-        
+
     except Exception as e:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             })
-        
+
         messages.error(request, f'Error deleting vessel: {str(e)}')
-    
+
     return redirect('vessel_list')
 @login_required
 @staff_member_required
@@ -2759,19 +2788,19 @@ def toggle_vessel_status(request, vessel_id):
             vessel = get_object_or_404(Vessel, id=vessel_id)
             vessel.active = not vessel.active
             vessel.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'active': vessel.active,
                 'message': f'Vessel status updated to {"active" if vessel.active else "inactive"}'
             })
-            
+
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'error': str(e)
             })
-    
+
     return JsonResponse({
         'success': False,
         'error': 'Invalid request method'
@@ -2804,7 +2833,7 @@ def add_schedule(request):
         notes = data.get('notes', '')
 
         # Validate required fields
-        if not all([vessel_id, route_id, departure_datetime, arrival_datetime, 
+        if not all([vessel_id, route_id, departure_datetime, arrival_datetime,
                    available_seats, available_cargo_space]):
             return JsonResponse({
                 'success': False,
@@ -2924,7 +2953,7 @@ def export_report(request):
 def export_csv(data):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename=booking_report_{data["month"].replace(" ", "_")}.csv'
-    
+
     writer = csv.writer(response)
     writer.writerow([
         'Booking Reference',
@@ -2976,7 +3005,7 @@ def export_excel(data):
         'Status',
         'Total Fare'
     ]
-    
+
     # Formats
     header_format = workbook.add_format({
         'bold': True,
@@ -2984,11 +3013,11 @@ def export_excel(data):
         'font_color': 'white',
         'border': 1
     })
-    
+
     cell_format = workbook.add_format({
         'border': 1
     })
-    
+
     money_format = workbook.add_format({
         'border': 1,
         'num_format': '₱#,##0.00'
@@ -3005,8 +3034,8 @@ def export_excel(data):
         worksheet.write(row, 2, booking.full_name, cell_format)
         worksheet.write(row, 3, booking.contact_number, cell_format)
         worksheet.write(row, 4, booking.get_booking_type_display(), cell_format)
-        worksheet.write(row, 5, 
-            booking.schedule.route.name if booking.schedule and booking.schedule.route else 'N/A', 
+        worksheet.write(row, 5,
+            booking.schedule.route.name if booking.schedule and booking.schedule.route else 'N/A',
             cell_format)
         worksheet.write(row, 6, booking.adult_passengers, cell_format)
         worksheet.write(row, 7, booking.child_passengers, cell_format)
@@ -3043,7 +3072,7 @@ def export_excel(data):
 def export_pdf(data):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename=booking_report_{data["month"].replace(" ", "_")}.pdf'
-    
+
     doc = SimpleDocTemplate(
         response,
         pagesize=landscape(letter),
@@ -3052,10 +3081,10 @@ def export_pdf(data):
         topMargin=72,
         bottomMargin=72
     )
-    
+
     story = []
     styles = getSampleStyleSheet()
-    
+
     # Add title and metadata
     title_style = ParagraphStyle(
         'CustomTitle',
@@ -3063,10 +3092,10 @@ def export_pdf(data):
         fontSize=24,
         spaceAfter=30
     )
-    
+
     story.append(Paragraph(f"Booking Report - {data['month']}", title_style))
     story.append(Spacer(1, 20))
-    
+
     # Create the main table
     table_data = [[
         'Reference',
@@ -3079,11 +3108,11 @@ def export_pdf(data):
         'Status',
         'Total Fare'
     ]]
-    
+
     for booking in data['bookings']:
         passengers = f"A:{booking.adult_passengers} C:{booking.child_passengers}"
         route_name = booking.schedule.route.name if booking.schedule and booking.schedule.route else 'N/A'
-        
+
         table_data.append([
             booking.booking_reference,
             booking.created_at.strftime('%Y-%m-%d'),
@@ -3095,7 +3124,7 @@ def export_pdf(data):
             'Paid' if booking.is_paid else 'Unpaid',
             f"₱{booking.total_fare:,.2f}"
         ])
-    
+
     # Create and style the table
     table = Table(table_data, repeatRows=1)
     table.setStyle(TableStyle([
@@ -3107,10 +3136,10 @@ def export_pdf(data):
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ]))
-    
+
     story.append(table)
     story.append(Spacer(1, 20))
-    
+
     # Add summary
     summary_style = ParagraphStyle(
         'Summary',
@@ -3120,7 +3149,7 @@ def export_pdf(data):
     )
     story.append(Paragraph(f"Total Bookings: {data['booking_count']}", summary_style))
     story.append(Paragraph(f"Total Revenue: ₱{data['total_revenue']:,.2f}", summary_style))
-    
+
     doc.build(story)
     return response
 
@@ -3159,17 +3188,17 @@ def get_vehicle_types(request):
 def update_vehicle_type(request, id):
     try:
         vehicle_type = get_object_or_404(VehicleType, id=id)
-        
+
         # Get data from request
         data = request.POST if request.method == "POST" else QueryDict(request.body)
-        
+
         # Update fields
         vehicle_type.name = data.get('name', vehicle_type.name)
         vehicle_type.max_occupants = data.get('max_occupants', vehicle_type.max_occupants)
         vehicle_type.max_cargo_weight = data.get('max_cargo_weight', vehicle_type.max_cargo_weight)
         vehicle_type.base_fare = data.get('base_fare', vehicle_type.base_fare)
         vehicle_type.save()
-        
+
         # Return the updated item HTML
         return render(request, 'dashboard/vehicle_type_item.html', {
             'vehicle_types': [vehicle_type]
@@ -3204,22 +3233,22 @@ def calculate_vehicle_fare(request):
             return JsonResponse({'error': 'Vehicle type is required'}, status=400)
 
         vehicle_type = get_object_or_404(VehicleType, id=vehicle_type_id)
-        
+
         # Get base fare for the vehicle type
         base_fare = vehicle_type.base_fare or Decimal('0.00')
-        
+
         # You can add additional calculations here based on your business logic
         # For example, adding surcharges based on weight, size, etc.
-        
+
         context = {
             'base_fare': float(base_fare),
             'vehicle_type': vehicle_type.name,
             'total_fare': float(base_fare)  # Modify this if you add surcharges
         }
-        
+
         # Return HTML snippet for HTMX
         return render(request, 'partials/vehicle_fare_details.html', context)
-        
+
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -3251,7 +3280,7 @@ def get_schedule(request, schedule_id):
     """API endpoint for getting schedule details"""
     try:
         schedule = get_object_or_404(Schedule, pk=schedule_id)
-        
+
         return JsonResponse({
             'success': True,
             'schedule': {
@@ -3287,7 +3316,7 @@ def schedule_delete(request, pk):
     """API endpoint for deleting a schedule"""
     try:
         schedule = get_object_or_404(Schedule, pk=pk)
-        
+
         # Delete the schedule
         schedule.delete()
 

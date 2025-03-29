@@ -55,13 +55,13 @@ class Schedule(models.Model):
     available_cargo_space = models.FloatField()
     # Add fare fields
     adult_fare = models.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0)],
         help_text="Adult passenger fare rate"
     )
     child_fare = models.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0)],
         help_text="Child passenger fare rate (ages 3-11)"
@@ -80,7 +80,7 @@ class Schedule(models.Model):
         """Calculate remaining passenger seats"""
         # Get total passenger capacity from vessel
         total_capacity = self.vessel.capacity_passengers
-        
+
         # Get total booked passengers for this schedule
         booked_passengers = Booking.objects.filter(
             schedule=self,
@@ -91,9 +91,9 @@ class Schedule(models.Model):
                 output_field=models.IntegerField()
             )
         )['total'] or 0
-        
+
         return total_capacity - booked_passengers
-    
+
     def get_available_cargo_space(self):
         """Calculate remaining cargo space"""
         # Get total cargo capacity from vessel
@@ -110,7 +110,7 @@ class Schedule(models.Model):
             )
         )['total'] or 0
 
-        return total_capacity - booked_cargo    
+        return total_capacity - booked_cargo
 
     def __str__(self):
         return f"{self.vessel.name} - {self.route.name} - {self.departure_datetime.strftime('%Y-%m-%d %H:%M')}"
@@ -137,6 +137,24 @@ class VehicleType(models.Model):
 # 3. BOOKING & QR CODE GENERATION
 # --------------------------------
 
+class Passenger(models.Model):
+    """Model to store individual passenger information"""
+    PASSENGER_TYPE_CHOICES = [
+        ('adult', 'Adult'),
+        ('child', 'Child'),
+    ]
+
+    full_name = models.CharField(max_length=200)
+    passenger_type = models.CharField(
+        max_length=10,
+        choices=PASSENGER_TYPE_CHOICES,
+        default='adult'
+    )
+    booking = models.ForeignKey('Booking', on_delete=models.CASCADE, related_name='passengers')
+
+    def __str__(self):
+        return f"{self.full_name} ({self.get_passenger_type_display()})"
+
 class Booking(models.Model):
     # Add these status choices at the top of the model
     STATUS_CHOICES = [
@@ -145,7 +163,7 @@ class Booking(models.Model):
         ('cancelled', 'Cancelled'),
         ('completed', 'Completed')
     ]
-    
+
     booking_reference = models.CharField(max_length=10, unique=True)
     BOOKING_TYPE_CHOICES = [
         ('passenger', 'Passenger'),
@@ -221,13 +239,13 @@ class Booking(models.Model):
         validators=[MinValueValidator(0)]
     )
 
- 
-    
+
+
     def calculate_total_fare(self):
         # For vehicle bookings, fare calculation is not applicable.
         if self.booking_type == 'vehicle':
             return Decimal('0.00')
-        
+
         adult_rate = self.adult_fare_rate if self.adult_fare_rate is not None else Decimal('0.00')
         child_rate = self.child_fare_rate if self.child_fare_rate is not None else Decimal('0.00')
         adult_total = self.adult_passengers * adult_rate
@@ -254,21 +272,21 @@ class Booking(models.Model):
         qr.add_data(self.booking_reference)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
-        
+
         # Create a file-like object to save the image to
         from io import BytesIO
         from django.core.files.uploadedfile import InMemoryUploadedFile
         import sys
-        
+
         # Save image to buffer
         buffer = BytesIO()
         img.save(buffer, format='PNG')
-        
+
         # Create a Django file from the buffer
         file_name = f"{self.booking_reference}.png"
         file_size = buffer.tell()
         buffer.seek(0)
-        
+
         # Create a Django file object and return it
         return InMemoryUploadedFile(
             buffer,
@@ -309,7 +327,7 @@ class Payment(models.Model):
     )
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_reference = models.CharField(max_length=50, unique=True)
-    
+
     class Meta:
         ordering = ['-payment_date']
 
@@ -373,10 +391,10 @@ class Notification(models.Model):
         max_length=50,
         choices=NOTIFICATION_TEMPLATES
     )
-    context = models.JSONField(
+    context = models.TextField(
         blank=True,
         null=True,
-        help_text="Dynamic data to display in the card template."
+        help_text="Dynamic data to display in the card template (JSON string)"
     )
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -403,9 +421,9 @@ class ContactMessage(models.Model):
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
+
     class Meta:
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"Message from {self.name} ({self.created_at.strftime('%Y-%m-%d')})"

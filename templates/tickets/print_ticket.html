@@ -53,13 +53,13 @@
             <!-- Passenger/Vehicle Information -->
             <div>
                 <h3 class="text-lg font-semibold mb-3">Booking Details</h3>
-                
+
                 <div class="bg-gray-50 rounded-lg p-4">
                     <p class="flex justify-between py-1">
                         <span class="text-gray-600">Booking Type:</span>
                         <span class="font-medium">{{ booking.get_booking_type_display }}</span>
                     </p>
-                    
+
                     {% if booking.booking_type == 'passenger' %}
                         <p class="flex justify-between py-1 border-t border-gray-200">
                             <span class="text-gray-600">Adult Passengers:</span>
@@ -69,8 +69,22 @@
                             <span class="text-gray-600">Child Passengers:</span>
                             <span class="font-medium">{{ booking.child_passengers }}</span>
                         </p>
+
+                        <!-- Passenger List -->
+                        {% if booking.passengers.all %}
+                        <div class="mt-3 border-t border-gray-200 pt-3">
+                            <p class="text-gray-600 font-medium mb-2">Passenger List:</p>
+                            <ul class="pl-4 space-y-1">
+                                {% for passenger in booking.passengers.all %}
+                                <li class="text-sm">
+                                    {{ passenger.full_name }} <span class="text-gray-500">({{ passenger.get_passenger_type_display }})</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
                     {% endif %}
-                    
+
                     {% if booking.booking_type == 'vehicle' %}
                         <p class="flex justify-between py-1 border-t border-gray-200">
                             <span class="text-gray-600">Vehicle Type:</span>
@@ -91,7 +105,7 @@
             <!-- Customer Information -->
             <div>
                 <h3 class="text-lg font-semibold mb-3">Customer Information</h3>
-                
+
                 <div class="bg-gray-50 rounded-lg p-4">
                     <p class="flex justify-between py-1">
                         <span class="text-gray-600">Name:</span>
@@ -117,14 +131,14 @@
                     <li>Ticket is non-transferable and non-refundable.</li>
                 </ul>
             </div>
-            
+
             <!-- QR Code -->
             <div class="flex justify-center py-4">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ booking.booking_reference }}" 
-                     alt="Booking QR Code" 
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ booking.booking_reference }}"
+                     alt="Booking QR Code"
                      class="h-32 w-32">
             </div>
-            
+
             <div class="text-center text-sm text-gray-500 mt-2">
                 <p>Generated on {{ booking.created_at|date:"F d, Y" }}</p>
             </div>
